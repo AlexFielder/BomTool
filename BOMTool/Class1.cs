@@ -10,7 +10,7 @@ namespace BOMTool
     public class Class1
     {
         public static Inventor.Application m_inventorApplication;
-        public List<Inventor.BOMRow> BomList;
+        public List<BomRowItem> BomList;
         public static Inventor.Application InventorApplication 
         { 
             get
@@ -23,7 +23,10 @@ namespace BOMTool
                 Class1.m_inventorApplication = value;
             }
         }
-        
+        public void BeginCorrectBom()
+        {
+
+        }
     }
     public class BomRowItem :IComparable<BomRowItem>
     {

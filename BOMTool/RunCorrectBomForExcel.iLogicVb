@@ -1,0 +1,139 @@
+﻿ 
+'AddReference "System.Core"
+'AddReference "System.Linq"
+'uncomment the following line before running the iLogic
+'AddReference "BomTool.dll"
+'Imports System.Collections.Generic
+'Imports System
+'Imports System.IO
+'Imports System.Linq
+Imports BomTool
+
+
+
+Sub Main()
+    Dim XTVB As New BomTool.Class1
+    Dim PartsList As List(Of BomTool.BomRowItem)
+'pass the local variables to our external .dll
+    XTVB.InventorApplication = ThisApplication
+    Dim oDoc As AssemblyComponentDefinition = ThisApplication.ActiveDocument.ComponentDefinition
+
+    ' Set a reference to the BOM
+    Dim oBOM As BOM
+    oBOM = oDoc.BOM
+
+    oBOM.StructuredViewFirstLevelOnly = True
+
+    ' Make sure that the structured view is enabled.
+    oBOM.StructuredViewEnabled = True
+
+    'Set a reference to the "Structured" BOMView
+    Dim oBOMView As BOMView
+    oBOMView = oBOM.BOMViews.Item("Structured")
+
+    Debug.Print("Item", Tab(15), "Quantity", Tab(30), "Part Number", Tab(70), "Description")
+    Debug.Print("----------------------------------------------------------------------------------")
+
+    'Initialize the tab for ItemNumber
+    Dim ItemTab As Long
+    ItemTab = -3
+    PartsList = QueryBOMRowProperties(oBOMView.BOMRows, InputBox("Classification?", "Hit Tab...", "UKUNC"))
+
+    'Dim ProjectCode as string = InputBox("Which project?", "4 Letter Project Code", "CODE")
+    'Dim filetab As String = ProjectCode + "-MODELLING-BASELINE"
+    'FilesArray = GoExcel.CellValues("C:\LEGACY VAULT WORKING FOLDER\Designs\Project Tracker.xlsx", filetab, "A3", "A4") ' sets excel to the correct sheet!
+    'For MyRow As Integer = 3 To 5000 ' max limit = 50 rows for debugging purposes
+    '    Dim SO As CreateAssemblyFromExcelVB.SubObjectCls
+    '    'not sure if we should change this to Column C as it contains the files we know about from the Vault
+    '    'if we did we could then have it insert that file if we linked this routine to Vault...?
+    '    If GoExcel.CellValue("B" & MyRow) = "" Then Exit For 'exits when the value is empty!
+    ''    Dim tmpstr As String = GoExcel.CellValue("I" & MyRow) 'parent row
+    ''    If Not tmpstr.StartsWith("AS-") Then
+    ''        Continue For
+    ''    End If
+    '	'some error checking since we don't always have parent assembly information in Excel:
+    '	Dim PartNo As String = GoExcel.CellValue("B" & MyRow)
+    '	Dim Descr As String = GoExcel.CellValue("K" & MyRow)
+    '	Dim RevNumber As String = GoExcel.CellValue("L" & MyRow)
+    '	Dim LegacyDrawingNumber As String = GoExcel.CellValue("M" & MyRow)
+    '	Dim ParentAssembly As String = GoExcel.CellValue("I" & MyRow)
+    '	If ParentAssembly = "" Then
+    '		ParentAssembly = "NA"
+    '	End If
+    '	SO = New CreateAssemblyFromExcelVB.SubObjectCls(PartNo,
+    '													Descr,
+    '													RevNumber,
+    '													LegacyDrawingNumber,
+    '													ParentAssembly)
+    '    'SO.PartNo = GoExcel.CellValue("B" & MyRow)  'PART NUMBER
+    '    'SO.LegacyDescr = GoExcel.CellValue("K" & MyRow) 'DESCRIPTION
+    '    'SO.LegacyRev = GoExcel.CellValue("L" & MyRow)   'REV
+    '    'SO.LegacyDrawingNo = GoExcel.CellValue("M" & MyRow) 'SUBJECT/LEGACY DRAWING NUMBER
+    '    'SO.ParentAssembly = GoExcel.CellValue("I" & MyRow)  'PARENT ASSEMBLY
+    '    PartsList.Add(SO)
+    'Next
+    ''MessageBox.Show(PartsList.Count)
+    ''Call XTVB.PopulatePartsList(PartsList)
+    'XTVB.StartFolder = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(ThisApplication.ActiveDocument.FullDocumentName))
+    'XTVB.ProjectCode = ProjectCode
+    'XTVB.PartsList = PartsList
+    'GoExcel.Close
+    'XTVB.FilesArray = FilesArray
+    'XTVB.GoExcel = GoExcel.Application
+    Dim tr As transaction
+    tr = ThisApplication.TransactionManager.StartTransaction(ThisApplication.ActiveDocument, "Create Standard Parts From Excel")
+    'Call XTVB.BeginCreateAssemblyStructure()
+    tr.End()
+    InventorVb.DocumentUpdate()
+End Sub
+Private Function QueryBOMRowProperties(oBOMRows As BOMRowsEnumerator, Classification As String) As List(Of BomTool.BomRowItem)
+    Dim tmplist As List(Of BomTool.BomRowItem) = New List(Of BomTool.BomRowItem)
+    ItemTab = ItemTab + 3
+    ' Iterate through the contents of the BOM Rows.
+    Dim i As Long
+    For i = 1 To oBOMRows.Count
+
+        ' Get the current row.
+        Dim oRow As BOMRow
+        oRow = oBOMRows.Item(i)
+
+        'Set a reference to the primary ComponentDefinition of the row
+        Dim oCompDef As ComponentDefinition
+        oCompDef = oRow.ComponentDefinitions.Item(1)
+
+        'uncomment these and use them as placeholders:
+        'Dim oPartNumProperty
+        'Dim oRevProperty
+        'Dim oDescripProperty
+        'Dim oItemNo As String
+        'Dim oClassification As String
+        'Dim oMaterial As String
+        'Dim oQty As Long
+        'Dim oVendorProperty
+        'Dim oCommentsProperty
+
+        Dim invProjProperties As PropertySet = oCompDef.Document.PropertySets.Item("{32853F0F-3444-11D1-9E93-0060B03C1CA6}")
+        Dim invSummaryiProperties As PropertySet = oCompDef.Document.PropertySets.Item("{F29F85E0-4FF9-1068-AB91-08002B27B3D9}")
+
+        'rowitem.PartNo = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
+        'rowItem.Descr = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
+        'rowItem.Rev = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kRevisionSummaryInformation).Value
+        'rowItem.ItemNo = oRow.ItemNumber
+        'rowItem.Classification = ""
+        Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
+        'Get the file property that contains the "Part Number"
+        'The file property is obtained from the parent
+        'document of the associated ComponentDefinition.
+        oPartNumProperty = oCompDef.Document.PropertySets _
+            .Item("Design Tracking Properties").Item("Part Number")
+
+        'Get the file property that contains the "Description"
+        oDescripProperty = oCompDef.Document.PropertySets _
+            .Item("Design Tracking Properties").Item("Description")
+
+            Debug.Print (Tab(ItemTab); oRow.ItemNumber; Tab(17); oRow.ItemQuantity; Tab(30); _
+                oPartNumProperty.Value; Tab(70); oDescripProperty.Value)
+        tmplist.Add(rowItem)
+    Next
+    Return tmplist
+End Function
