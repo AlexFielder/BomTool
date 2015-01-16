@@ -16,11 +16,12 @@ Sub Main()
     Dim PartsList As List(Of BomTool.BomRowItem)
 'pass the local variables to our external .dll
     XTVB.InventorApplication = ThisApplication
-    Dim oDoc As AssemblyComponentDefinition = ThisApplication.ActiveDocument.ComponentDefinition
+    Dim oDoc As AssemblyDocument = ThisApplication.ActiveDocument
+    'Dim oDoc As AssemblyComponentDefinition = ThisApplication.ActiveDocument.ComponentDefinition
 
     ' Set a reference to the BOM
     Dim oBOM As BOM
-    oBOM = oDoc.BOM
+    oBOM = oDoc.ComponentDefinition.BOM
 
     oBOM.StructuredViewFirstLevelOnly = True
 
@@ -37,7 +38,7 @@ Sub Main()
     'Initialize the tab for ItemNumber
     Dim ItemTab As Long
     ItemTab = -3
-    PartsList = QueryBOMRowProperties(oBOMView.BOMRows, InputBox("Classification?", "Hit Tab...", "UKUNC"))
+    PartsList = QueryBOMRowProperties(oDoc, oBOMView.BOMRows, InputBox("Classification?", "Hit N,C & Tab...", "UKU"))
 
     'Dim ProjectCode as string = InputBox("Which project?", "4 Letter Project Code", "CODE")
     'Dim filetab As String = ProjectCode + "-MODELLING-BASELINE"
@@ -86,7 +87,7 @@ Sub Main()
     tr.End()
     InventorVb.DocumentUpdate()
 End Sub
-Private Function QueryBOMRowProperties(oBOMRows As BOMRowsEnumerator, Classification As String) As List(Of BomTool.BomRowItem)
+Private Function QueryBOMRowProperties(ByVal Doc As AssemblyDocument, ByVal oBOMRows As BOMRowsEnumerator, ByVal Classification As String) As List(Of BomTool.BomRowItem)
     Dim tmplist As List(Of BomTool.BomRowItem) = New List(Of BomTool.BomRowItem)
     ItemTab = ItemTab + 3
     ' Iterate through the contents of the BOM Rows.
@@ -101,39 +102,70 @@ Private Function QueryBOMRowProperties(oBOMRows As BOMRowsEnumerator, Classifica
         Dim oCompDef As ComponentDefinition
         oCompDef = oRow.ComponentDefinitions.Item(1)
 
-        'uncomment these and use them as placeholders:
-        'Dim oPartNumProperty
-        'Dim oRevProperty
-        'Dim oDescripProperty
-        'Dim oItemNo As String
-        'Dim oClassification As String
-        'Dim oMaterial As String
-        'Dim oQty As Long
-        'Dim oVendorProperty
-        'Dim oCommentsProperty
-
+        'get the PropertySets we need
         Dim invProjProperties As PropertySet = oCompDef.Document.PropertySets.Item("{32853F0F-3444-11D1-9E93-0060B03C1CA6}")
         Dim invSummaryiProperties As PropertySet = oCompDef.Document.PropertySets.Item("{F29F85E0-4FF9-1068-AB91-08002B27B3D9}")
+
+
+        Dim oPartNumProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
+        Dim oRevProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kRevisionSummaryInformation).Value
+        Dim oDescripProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
+        Dim oItemNo As String = oRow.ItemNumber
+        Dim oClassification As String = Classification
+        Dim oMaterial As String = oCompDef.Material
+        Dim oQty As Long = oRow.ItemQuantity
+        Dim oVendorProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kVendorDesignTrackingProperties).Value
+        Dim oCommentsProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kCommentsSummaryInformation).Value
+
 
         'rowitem.PartNo = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
         'rowItem.Descr = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
         'rowItem.Rev = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kRevisionSummaryInformation).Value
         'rowItem.ItemNo = oRow.ItemNumber
         'rowItem.Classification = ""
-        Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
+        Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem(
+                                            oPartNumProperty, _
+                                            oRevProperty, _
+                                            oDescripProperty, _
+                                            oItemNo, _
+                                            oClassification, _
+                                            oMaterial, _
+                                            oQty, _
+                                            oVendorProperty, _
+                                            oCommentsProperty, _
+                                            GetBomRowTypeByFileName(Doc.FullFileName))
         'Get the file property that contains the "Part Number"
         'The file property is obtained from the parent
         'document of the associated ComponentDefinition.
-        oPartNumProperty = oCompDef.Document.PropertySets _
-            .Item("Design Tracking Properties").Item("Part Number")
+        'oPartNumProperty = oCompDef.Document.PropertySets _
+        '    .Item("Design Tracking Properties").Item("Part Number")
 
-        'Get the file property that contains the "Description"
-        oDescripProperty = oCompDef.Document.PropertySets _
-            .Item("Design Tracking Properties").Item("Description")
+        ''Get the file property that contains the "Description"
+        'oDescripProperty = oCompDef.Document.PropertySets _
+        '    .Item("Design Tracking Properties").Item("Description")
 
-            Debug.Print (Tab(ItemTab); oRow.ItemNumber; Tab(17); oRow.ItemQuantity; Tab(30); _
-                oPartNumProperty.Value; Tab(70); oDescripProperty.Value)
+        '    Debug.Print (Tab(ItemTab); oRow.ItemNumber; Tab(17); oRow.ItemQuantity; Tab(30); _
+        '        oPartNumProperty.Value; Tab(70); oDescripProperty.Value)
         tmplist.Add(rowItem)
     Next
     Return tmplist
+End Function
+
+Public Function GetBomRowTypeByFileName(DocName As String) As Long
+    If DocName.Contains("SP-") Then
+        MessageBox.Show(DocName)
+        Return 1
+    ElseIf DocName.EndsWith(".iam") Then
+        MessageBox.Show(DocName)
+        Return 2
+    ElseIf DocName.Contains("DT-") Then
+        MessageBox.Show(DocName)
+        Return 3
+    ElseIf DocName.Contains("COTS-") Then
+        MessageBox.Show(DocName)
+        Return 4
+    ElseIf docname.Contains("Content") Or Docname.Contains("Imported Components") Then
+        MessageBox.Show(DocName)
+        Return 5
+    End If
 End Function
