@@ -72,6 +72,7 @@ Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator, ByVa
         'get the PropertySets we need
         Dim invProjProperties As PropertySet = oCompDef.Document.PropertySets.Item("{32853F0F-3444-11D1-9E93-0060B03C1CA6}")
         Dim invSummaryiProperties As PropertySet = oCompDef.Document.PropertySets.Item("{F29F85E0-4FF9-1068-AB91-08002B27B3D9}")
+        Dim invCustomPropertySet As PropertySet = oCompDef.Document.PropertySets.Item("Inventor User Defined Properties")
 
 
         Dim oPartNumProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
@@ -79,6 +80,11 @@ Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator, ByVa
         Dim oDescripProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
         Dim oItemNo As String = oRow.ItemNumber
         Dim oClassification As String = Classification
+        'If Not invCustomPropertySet.Item("01 - Protective Marking") = Nothing Then
+        '    oClassification = invCustomPropertySet.Item("01 - Protective Marking").Value
+        'Else
+        '    oClassification = Classification
+        'End If
         Dim oMaterial As String
         If TypeOf oCompDef.Document Is AssemblyDocument Then
             'Messagebox.Show("Assembly, no Material!")
@@ -135,53 +141,112 @@ Public Function GetBomRowTypeByFileName(DocName As String) As Long
     End If
 End Function
 
+''' <summary>
+''' Returns our sorted list to Excel or leaves it as-is if we know the parts list can fit on drawing sheet one of the assembly.
+''' </summary>
+''' <param name="oPartsList">our sorted, renumbered partslist object</param>
+''' <remarks></remarks>
 Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem))
-    'For Each item As BomRowItem In oPartsList
-    '    MessageBox.Show(item.ItemNo)
-    'Next
-    'oPartsList.OrderBy(Function(x) x.ItemNo)
-    'For Each item As BomRowItem In oPartsList
-    '    MessageBox.Show(item.ItemNo)
-    'Next
-    'Dim ProjectCode as string = InputBox("Which project?", "4 Letter Project Code", "CODE")
-    'Dim filetab As String = ProjectCode + "-MODELLING-BASELINE"
-    'FilesArray = GoExcel.CellValues("C:\LEGACY VAULT WORKING FOLDER\Designs\Project Tracker.xlsx", filetab, "A3", "A4") ' sets excel to the correct sheet!
-    'For MyRow As Integer = 3 To 5000 ' max limit = 50 rows for debugging purposes
-    '    Dim SO As CreateAssemblyFromExcelVB.SubObjectCls
-    '    'not sure if we should change this to Column C as it contains the files we know about from the Vault
-    '    'if we did we could then have it insert that file if we linked this routine to Vault...?
-    '    If GoExcel.CellValue("B" & MyRow) = "" Then Exit For 'exits when the value is empty!
-    ''    Dim tmpstr As String = GoExcel.CellValue("I" & MyRow) 'parent row
-    ''    If Not tmpstr.StartsWith("AS-") Then
-    ''        Continue For
-    ''    End If
-    '	'some error checking since we don't always have parent assembly information in Excel:
-    '	Dim PartNo As String = GoExcel.CellValue("B" & MyRow)
-    '	Dim Descr As String = GoExcel.CellValue("K" & MyRow)
-    '	Dim RevNumber As String = GoExcel.CellValue("L" & MyRow)
-    '	Dim LegacyDrawingNumber As String = GoExcel.CellValue("M" & MyRow)
-    '	Dim ParentAssembly As String = GoExcel.CellValue("I" & MyRow)
-    '	If ParentAssembly = "" Then
-    '		ParentAssembly = "NA"
-    '	End If
-    '	SO = New CreateAssemblyFromExcelVB.SubObjectCls(PartNo,
-    '													Descr,
-    '													RevNumber,
-    '													LegacyDrawingNumber,
-    '													ParentAssembly)
-    '    'SO.PartNo = GoExcel.CellValue("B" & MyRow)  'PART NUMBER
-    '    'SO.LegacyDescr = GoExcel.CellValue("K" & MyRow) 'DESCRIPTION
-    '    'SO.LegacyRev = GoExcel.CellValue("L" & MyRow)   'REV
-    '    'SO.LegacyDrawingNo = GoExcel.CellValue("M" & MyRow) 'SUBJECT/LEGACY DRAWING NUMBER
-    '    'SO.ParentAssembly = GoExcel.CellValue("I" & MyRow)  'PARENT ASSEMBLY
-    '    PartsList.Add(SO)
-    'Next
-    ''MessageBox.Show(PartsList.Count)
-    ''Call XTVB.PopulatePartsList(PartsList)
-    'XTVB.StartFolder = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(ThisApplication.ActiveDocument.FullDocumentName))
-    'XTVB.ProjectCode = ProjectCode
-    'XTVB.BomList = PartsList
-    'GoExcel.Close
-    'XTVB.FilesArray = FilesArray
-    'XTVB.GoExcel = GoExcel.Application
+
+    Dim booleanParam As Boolean = InputRadioBox("Will the Parts list fit on the drawing?", "Yes", "No", booleanParam, Title:="Title")
+    If booleanParam Then
+        'we're done here because the parts list will fit.
+        Exit Sub
+    Else
+        'we need to make an Excel file.
+        Dim filetab As String = "DETAILS"
+        Dim xlTemplate As String = "C:\LEGACY VAULT WORKING FOLDER\Designs\iLogic\Templates\BOM_Master.xlsx"
+        Dim excelApp = CreateObject("Excel.Application")
+        Dim excelWorkBook
+        Dim excelWorkSheet
+        excelApp.Visible = True
+        excelApp.DisplayAlerts = False
+
+        If dir(xltemplate) <> "" Then
+            'MessageBox.Show("Excel file found for output, continuing!")
+            excelworkbook = excelApp.workbooks.open(xltemplate)
+            excelSheet = excelWorkbook.Worksheets(2).Activate
+        Else
+            MessageBox.Show("No excel file found for output!")
+            Exit Sub
+        End If
+        'FilesArray = GoExcel.CellValues("C:\LEGACY VAULT WORKING FOLDER\Designs\iLogic\Templates\BOM_Master.xlsx", filetab, "A3", "A4") ' sets excel to the correct sheet!
+        Dim MyRow As Integer = 2
+        Dim specHeader As Boolean = False
+        Dim saHeader As Boolean = False
+        Dim dpHeader As Boolean = False
+        Dim cotsHeader As Boolean = False
+        For Each oItem As BomRowItem In oPartsList
+            If oItem.ItemNo = 0 And specHeader = False Then
+                excelapp.range("A" & MyRow).Select()
+                excelapp.ActiveCell.Value = "SPECIFICATIONS"
+                'GoExcel.CellValue("A" & MyRow) = "SPECIFICATIONS"
+                specHeader = True
+                MyRow = MyRow + 1
+            ElseIf oItem.ItemNo >= 1 And oItem.ItemNo < 200 And saHeader = False Then
+                excelapp.range("A" & MyRow).Select()
+                excelapp.ActiveCell.Value = "SUB ASSEMBLIES"
+                'GoExcel.CellValue("A" & MyRow) = "SUB ASSEMBLIES"
+                saHeader = True
+                MyRow = MyRow + 1
+            ElseIf oitem.ItemNo >= 200 And oItem.ItemNo < 500 And dpHeader = False Then
+                excelapp.range("A" & MyRow).Select()
+                excelapp.ActiveCell.Value = "DETAILED PARTS"
+                'GoExcel.CellValue("A" & MyRow) = "DETAILED PARTS"
+                dpHeader = True
+                MyRow = MyRow + 1
+            ElseIf oItem.ItemNo >= 500 And cotsheader = False Then
+                excelapp.range("A" & MyRow).Select()
+                excelapp.ActiveCell.Value = "COTS PARTS"
+                'GoExcel.CellValue("A" & MyRow) = "COTS PARTS"
+                cotsHeader = True
+                MyRow = MyRow + 1
+                'Else
+                '    excelapp.range("A" & MyRow).Select()
+                '    excelapp.ActiveCell.Value = "SOMETHING ELSE ENTIRELY!?"
+                '    'GoExcel.CellValue("A" & MyRow) = "SOMETHING ELSE ENTIRELY!?"
+                '    MyRow = MyRow + 1
+            End If
+            excelapp.range("A" & MyRow).Select()
+            If oItem.ItemNo = 0 Then
+                excelapp.ActiveCell.Value = ""
+            Else
+                excelapp.ActiveCell.Value = oItem.ItemNo.ToString()
+            End If
+            'GoExcel.CellValue("A" & MyRow) = oItem.ItemNo
+            excelapp.range("B" & MyRow).Select()
+            excelapp.ActiveCell.Value = oItem.PartNo
+            'GoExcel.CellValue("B" & MyRow) = oItem.PartNo
+            excelapp.range("C" & MyRow).Select()
+            excelapp.ActiveCell.Value = oItem.Rev
+            'GoExcel.CellValue("C" & MyRow) = oItem.Rev
+            excelapp.range("D" & MyRow).Select()
+            excelapp.ActiveCell.Value = oItem.Descr
+            'GoExcel.CellValue("D" & MyRow) = oItem.Descr
+            excelapp.range("E" & MyRow).Select()
+            excelapp.ActiveCell.Value = oItem.Classification
+            'GoExcel.CellValue("E" & MyRow) = oItem.Classification
+            excelapp.range("F" & MyRow).Select()
+            excelapp.ActiveCell.Value = oItem.Material
+            'GoExcel.CellValue("F" & MyRow) = oItem.Material
+            excelapp.range("G" & MyRow).Select()
+            excelapp.ActiveCell.Value = oItem.Qty.ToString()
+            'GoExcel.CellValue("G" & MyRow) = oItem.Qty
+            excelapp.range("H" & MyRow).Select()
+            excelapp.ActiveCell.Value = ""
+            'GoExcel.CellValue("H" & MyRow) = ""
+            excelapp.range("H" & MyRow).Select()
+            excelapp.ActiveCell.Value = oItem.Vendor
+            'GoExcel.CellValue("I" & MyRow) = oItem.Vendor
+            excelapp.range("H" & MyRow).Select()
+            excelapp.ActiveCell.Value = ""
+            'GoExcel.CellValue("J" & MyRow) = ""
+            excelapp.range("K" & MyRow).Select()
+            excelapp.ActiveCell.Value = oItem.Comments
+            'GoExcel.CellValue("K" & MyRow) = oItem.Comments
+            MyRow = MyRow + 1
+        Next
+        excelapp.Columns.Autofit()
+        excelWorkbook.SaveAs(System.IO.Path.GetDirectoryName(ThisApplication.ActiveDocument.FullFileName) & "\" & System.IO.Path.GetFileNameWithoutExtension(ThisApplication.ActiveDocument.FullFileName) & ".xlsx")
+    End If
 End Sub

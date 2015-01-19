@@ -34,7 +34,7 @@ namespace BOMTool
             var grouped = InventorBomList.OrderBy(x => x.BomRowType).GroupBy(x => x.BomRowType);
             //InventorBomList.RemoveRange(0, InventorBomList.Count);
             // InventorBomList.RemoveAll(NotEmpty);
-            MessageBox.Show("InventorBomList.Count= " + InventorBomList.Count);
+            //MessageBox.Show("InventorBomList.Count= " + InventorBomList.Count);
             int SubAssemblyInt = 1;
             int DetailedPartsInt = 200;
             int COTSContentImportedInt = 500;
@@ -70,38 +70,26 @@ namespace BOMTool
             }
             //hopefully sort by ItemNo
             BomList.OrderBy(x => x.ItemNo);
-            MessageBox.Show("BomList.Count= " + BomList.Count);
+            //MessageBox.Show("BomList.Count= " + BomList.Count);
             InventorBomList = BomList;
         }
         public void UpdateInventorPartsList(BOMRowsEnumerator oBOMROWs, List<BomRowItem> oSortedPartsList)
         {
-            MessageBox.Show("Reached UpdateInventorPartsList Sub");
+            //MessageBox.Show("Reached UpdateInventorPartsList Sub");
             ComponentDefinition oCompdef;
             foreach (BOMRow oRow in oBOMROWs)
             {
                 oCompdef = oRow.ComponentDefinitions[1];
                 long itemNo = (from BomRowItem a in oSortedPartsList where a.FileName == oCompdef.Document.FullFileName select a.ItemNo).FirstOrDefault();
-                //MessageBox.Show("New Item number = " + itemNo.ToString());
-                //MessageBox.Show("Existing Item number: " + oRow.ItemNumber);
-                oRow.ItemNumber = itemNo.ToString();
+                if (itemNo == 0)
+                {
+                    oRow.ItemNumber = "";
+                }
+                else
+                {
+                    oRow.ItemNumber = itemNo.ToString();
+                }
             }
-            //now to sorting the damn thing.
-
-
-            //for (i = 1; i <= oBOMROWs.Count; i++)
-            //{
-            //    BOMRow oRow = oBOMROWs[1];
-            //    oCompdef = oRow.ComponentDefinitions[1];
-            //    dynamic itemNo = (from BomRowItem a in oSortedPartsList where a.FileName == oCompdef.Document.FullFileName select a.ItemNo);
-            //    MessageBox.Show("New Item number = " + itemNo.ToString());
-            //    MessageBox.Show("Existing Item number: " + oRow.ItemNumber);
-            //}
-
-        }
-
-        private bool NotEmpty(BomRowItem obj)
-        {
-            return obj.BomRowType > 0;
         }
     }
     public class BomRowItem
