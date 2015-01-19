@@ -5,6 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using Inventor;
+//using Autodesk.iLogic;
+//using Inventor;
 
 namespace BOMTool
 {
@@ -70,104 +73,49 @@ namespace BOMTool
             MessageBox.Show("BomList.Count= " + BomList.Count);
             InventorBomList = BomList;
         }
+        public void UpdateInventorPartsList(BOMRowsEnumerator oBOMROWs, List<BomRowItem> oSortedPartsList)
+        {
+            MessageBox.Show("Reached UpdateInventorPartsList Sub");
+            ComponentDefinition oCompdef;
+            foreach (BOMRow oRow in oBOMROWs)
+            {
+                oCompdef = oRow.ComponentDefinitions[1];
+                long itemNo = (from BomRowItem a in oSortedPartsList where a.FileName == oCompdef.Document.FullFileName select a.ItemNo).FirstOrDefault();
+                //MessageBox.Show("New Item number = " + itemNo.ToString());
+                //MessageBox.Show("Existing Item number: " + oRow.ItemNumber);
+                oRow.ItemNumber = itemNo.ToString();
+            }
+            //now to sorting the damn thing.
+
+
+            //for (i = 1; i <= oBOMROWs.Count; i++)
+            //{
+            //    BOMRow oRow = oBOMROWs[1];
+            //    oCompdef = oRow.ComponentDefinitions[1];
+            //    dynamic itemNo = (from BomRowItem a in oSortedPartsList where a.FileName == oCompdef.Document.FullFileName select a.ItemNo);
+            //    MessageBox.Show("New Item number = " + itemNo.ToString());
+            //    MessageBox.Show("Existing Item number: " + oRow.ItemNumber);
+            //}
+
+        }
 
         private bool NotEmpty(BomRowItem obj)
         {
             return obj.BomRowType > 0;
         }
     }
-    public class BomRowItem :IComparable<BomRowItem>
+    public class BomRowItem
     {
-        public string PartNo;
-        public string Descr;
-        public string Rev;
-        public long ItemNo;
-        public string Classification;
-        public string Material;
-        public long Qty;
-        public string Vendor;
-        public string Comments;
-        public long BomRowType;
-        public List<BomRowItem> Children;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="m_partNo">Part Number</param>
-        /// <param name="m_descr">Description</param>
-        /// <param name="m_rev">Revision</param>
-        /// <param name="m_itemno">Item Number</param>
-        /// <param name="m_classification">Classification</param>
-        /// <param name="m_material">Material</param>
-        /// <param name="m_quantity">Quantity</param>
-        /// <param name="m_vendor">Vendor</param>
-        /// <param name="m_comments">Comments</param>
-        /// <param name="m_bomrowtype">Bom Row Type</param>
-        /// <param name="m_children">Children?</param>
-        public BomRowItem(
-            string m_partNo, 
-            string m_descr, 
-            string m_rev, 
-            long m_itemno,
-            string m_classification,
-            string m_material,
-            long m_quantity,
-            string m_vendor,
-            string m_comments,
-            long m_bomrowtype,
-            List<BomRowItem> m_children = null)
-        {
-            this.PartNo = m_partNo;
-            this.Descr = m_descr;
-            this.Rev = m_rev;
-            this.ItemNo = m_itemno;
-            this.Classification = m_classification;
-            this.Material = m_material;
-            this.Qty = m_quantity;
-            this.Vendor = m_vendor;
-            this.Comments = m_comments;
-            this.BomRowType = m_bomrowtype;
-            this.Children = m_children;
-        }
-        public int CompareTo(BomRowItem other)
-        {
-            return this.CompareTo(other);
-        }
-
-        /// <summary>
-        /// Split the collection into groups based on bomrowtype
-        /// </summary>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        public static List<List<BomRowItem>> Split(List<BomRowItem> source)
-        {
-            return source.Select((x, i) => new {
-                Index = i,
-                Value = x
-            }).GroupBy(x => x.Index).Select(x => x.Select(v => v.Value).ToList()).ToList();
-        }
-
-        /// <summary>
-        /// Allows for sorting of the BomRowItem class
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="KeySelector"></param>
-        public void Sort<T>(Func<BomRowItem, T> KeySelector) where T : IComparable
-        {
-            BowRowItemComparer ic = new BowRowItemComparer();
-            this.Children.Sort(ic);
-        }
-
-    }
-    public class BowRowItemComparer : IComparer<BomRowItem>
-    {
-        //public BomRowItemComparer()
-        //{
-        
-        //}
-        public int Compare(BomRowItem x, BomRowItem y)
-        {
-            return x.BomRowType.CompareTo(y.BomRowType);
-        }
+        public string FileName { get; set; }
+        public string PartNo { get; set; }
+        public string Descr { get; set; }
+        public string Rev { get; set; }
+        public long ItemNo { get; set; }
+        public string Classification { get; set; }
+        public string Material { get; set; }
+        public long Qty { get; set; }
+        public string Vendor { get; set; }
+        public string Comments { get; set; }
+        public long BomRowType { get; set; }
     }
 }
