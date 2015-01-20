@@ -105,5 +105,6 @@ namespace BOMTool
         public string Vendor { get; set; }
         public string Comments { get; set; }
         public long BomRowType { get; set; }
+        public string status { get; set; }
     }
 }
