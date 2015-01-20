@@ -96,7 +96,7 @@ namespace BOMTool
             {
                 oCompdef = oRow.ComponentDefinitions[1];
                 long itemNo = (from BomRowItem a in oSortedPartsList where a.FileName == oCompdef.Document.FullFileName select a.ItemNo).FirstOrDefault();
-                if (itemNo == 0)
+                if (itemNo == 0 || itemNo == 9999)
                 {
                     oRow.ItemNumber = "";
                 }

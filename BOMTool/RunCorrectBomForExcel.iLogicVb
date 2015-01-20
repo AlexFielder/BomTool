@@ -8,7 +8,7 @@
 'Imports System.IO
 Imports System.Data.Linq
 Imports BomTool
-
+Imports System.Text.RegularExpressions
 
 ''' <summary>
 ''' Our Main program.
@@ -37,7 +37,10 @@ Sub Main()
 
     Dim tr As transaction
     tr = ThisApplication.TransactionManager.StartTransaction(ThisApplication.ActiveDocument, "Create Excel Bom From This Assembly")
-    PartsList = QueryBOMRowProperties(oBOMView.BOMRows, InputBox("Classification?", "Hit N,C & Tab...", "UKU"))
+    Classification = InputBox("Classification?", "Hit N,C & Tab...", "UKU")
+    PartsList = New List(Of BomTool.BomRowItem)
+    PartsList.Add(getRowItem(oDoc.ComponentDefinition))
+    PartsList.AddRange(QueryBOMRowProperties(oBOMView.BOMRows))
     Call XTCS.BeginReformatBomForExcel(PartsList)
     Call XTCS.UpdateInventorPartsList(oBOMView.BOMRows, PartsList)
     oBOMView.Sort("Item", 1)
@@ -45,6 +48,10 @@ Sub Main()
     tr.End()
     InventorVb.DocumentUpdate()
 End Sub
+
+Public XTCS As New BomTool.Class1
+Public Classification As String = String.Empty
+Public PartsList As List(Of BomTool.BomRowItem)
 
 ''' <summary>
 ''' Queries the BOM Row properties and generates a list to pass externally for sorting.
@@ -160,14 +167,14 @@ End Function
 ''' <summary>
 ''' Returns the BomRowType int
 ''' </summary>
-''' <param name="DocName"></param>
+''' <param name="DocName">The name to check against.</param>
 ''' <returns></returns>
 ''' <remarks></remarks>
 Public Function GetBomRowTypeByFileName(DocName As String) As Long
     If DocName.Contains("SP-") Then
         'MessageBox.Show(DocName & " Returns value 1")
         Return 1
-    ElseIf DocName.EndsWith(".iam") Then
+    ElseIf DocName.EndsWith(".iam") And Not docname = ThisApplication.ActiveDocument.FullFileName Then
         'MessageBox.Show(DocName & " Returns value 2")
         Return 2
     ElseIf DocName.Contains("DT-") Then
@@ -176,12 +183,14 @@ Public Function GetBomRowTypeByFileName(DocName As String) As Long
     ElseIf DocName.Contains("COTS-") Or docname.Contains("Content") Or Docname.Contains("Imported Components") Then
         'MessageBox.Show(DocName & " Returns value 4")
         Return 4
+    ElseIf docname = ThisApplication.ActiveDocument.FullFileName Then
+        MessageBox.Show(DocName & " Returns value 5")
+        Return 5
     Else 'These are parts which don't match any of the above criteria
         'MessageBox.Show(DocName & " Returns value 4")
         Return 4
     End If
 End Function
-
 ''' <summary>
 ''' Returns our sorted list to Excel or leaves it as-is if we know the parts list can fit on drawing sheet one of the assembly.
 ''' </summary>
