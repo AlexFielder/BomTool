@@ -69,6 +69,7 @@ namespace BOMTool
                             BomList.Add(item);
                             break;
                         case 5: //Parent Assembly
+                            MessageBox.Show("Should only be one of these!");
                             item.ItemNo = 0;
                             BomList.Add(item);
                             break;
