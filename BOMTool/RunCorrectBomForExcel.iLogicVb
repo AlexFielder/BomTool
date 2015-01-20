@@ -17,7 +17,7 @@ Imports BomTool
 Sub Main()
     Dim XTCS As New BomTool.Class1
     Dim PartsList As List(Of BomTool.BomRowItem)
-'pass the local variables to our external .dll
+    'pass the local variables to our external .dll
     XTCS.InventorApplication = ThisApplication
     Dim oDoc As AssemblyDocument = ThisApplication.ActiveDocument
     'Dim oDoc As AssemblyComponentDefinition = ThisApplication.ActiveDocument.ComponentDefinition
@@ -54,7 +54,7 @@ End Sub
 ''' <param name="Classification"></param>
 ''' <returns></returns>
 ''' <remarks></remarks>
-Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator, ByVal Classification As String) As List(Of BomTool.BomRowItem)
+Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator) As List(Of BomTool.BomRowItem)
     Dim tmplist As List(Of BomTool.BomRowItem) = New List(Of BomTool.BomRowItem)
     ItemTab = ItemTab + 3
     ' Iterate through the contents of the BOM Rows.
@@ -68,52 +68,93 @@ Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator, ByVa
         'Set a reference to the primary ComponentDefinition of the row
         Dim oCompDef As ComponentDefinition
         oCompDef = oRow.ComponentDefinitions.Item(1)
-
-        'get the PropertySets we need
-        Dim invProjProperties As PropertySet = oCompDef.Document.PropertySets.Item("{32853F0F-3444-11D1-9E93-0060B03C1CA6}")
-        Dim invSummaryiProperties As PropertySet = oCompDef.Document.PropertySets.Item("{F29F85E0-4FF9-1068-AB91-08002B27B3D9}")
-        Dim invCustomPropertySet As PropertySet = oCompDef.Document.PropertySets.Item("Inventor User Defined Properties")
-
-
-        Dim oPartNumProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
-        Dim oRevProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kRevisionSummaryInformation).Value
-        Dim oDescripProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
-        Dim oItemNo As String = oRow.ItemNumber
-        Dim oClassification As String = Classification
-        'If Not invCustomPropertySet.Item("01 - Protective Marking") = Nothing Then
-        '    oClassification = invCustomPropertySet.Item("01 - Protective Marking").Value
-        'Else
-        '    oClassification = Classification
-        'End If
-        Dim oMaterial As String
-        If TypeOf oCompDef.Document Is AssemblyDocument Then
-            'Messagebox.Show("Assembly, no Material!")
-            omaterial = ""
-        Else
-            'Messagebox.Show("Part!")
-            omaterial = oCompDef.Material.Name
-        End If
-        Dim oQty As Long = oRow.ItemQuantity
-        Dim oVendorProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kVendorDesignTrackingProperties).Value
-        Dim oCommentsProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kCommentsSummaryInformation).Value
-
-        Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
-
-        rowItem.FileName = oCompDef.Document.FullFileName
-        rowItem.PartNo = oPartNumProperty
-        rowItem.Rev = oRevProperty
-        rowItem.Descr = oDescripProperty
-        rowItem.ItemNo = oItemNo
-        rowItem.Classification = oClassification
-        rowItem.Material = oMaterial
-        rowItem.Qty = oQty
-        rowItem.Vendor = oVendorProperty
-        rowItem.Comments = oCommentsProperty
-        rowItem.BomRowType = GetBomRowTypeByFileName(oCompDef.Document.FullFileName)
-
-        tmplist.Add(rowItem)
+        tmplist.Add(getRowItem(oCompDef, oRow))
     Next
     Return tmplist
+End Function
+
+''' <summary>
+''' creates a BomRowItem for every ComponentDefinition passed to it.
+''' </summary>
+''' <param name="oCompdef">the ComponentDefinition we need to query against.</param>
+''' <returns>Returns a BomRowItem</returns>
+''' <remarks></remarks>
+Public Function getRowItem(oCompdef As componentdefinition, oRow As BOMRow) As BomRowItem
+
+    'get the PropertySets we need
+    Dim invProjProperties As PropertySet = oCompDef.Document.PropertySets.Item("{32853F0F-3444-11D1-9E93-0060B03C1CA6}")
+    Dim invSummaryiProperties As PropertySet = oCompDef.Document.PropertySets.Item("{F29F85E0-4FF9-1068-AB91-08002B27B3D9}")
+    Dim invCustomPropertySet As PropertySet = oCompDef.Document.PropertySets.Item("Inventor User Defined Properties")
+
+    Dim oPartNumProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
+    Dim oRevProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kRevisionSummaryInformation).Value
+    Dim oDescripProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
+    Dim oStatusProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDesignStatusDesignTrackingProperties).Value
+
+    Dim oItemNo As String = oRow.ItemNumber
+    Dim oClassification As String = Classification
+    Dim oMaterial As String
+    If TypeOf oCompDef.Document Is AssemblyDocument Then
+        oMaterial = ""
+    Else
+        oMaterial = oCompDef.Material.Name
+    End If
+    Dim oQty As Long = oRow.ItemQuantity
+    Dim oVendorProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kVendorDesignTrackingProperties).Value
+    Dim oCommentsProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kCommentsSummaryInformation).Value
+
+    Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
+
+    rowItem.FileName = oCompDef.Document.FullFileName
+    rowItem.PartNo = oPartNumProperty
+    rowItem.Rev = oRevProperty
+    rowItem.Descr = oDescripProperty
+    rowItem.ItemNo = oItemNo
+    rowItem.Classification = oClassification
+    rowItem.Material = oMaterial
+    rowItem.Qty = oQty
+    rowItem.Vendor = oVendorProperty
+    rowItem.Comments = oCommentsProperty
+    rowItem.BomRowType = GetBomRowTypeByFileName(oCompDef.Document.FullFileName)
+    rowItem.status = oStatusproperty
+    Return rowItem
+End Function
+
+''' <summary>
+''' creates a BomRowItem for the parent ComponentDefinition passed to it.
+''' </summary>
+''' <param name="oCompdef">the ComponentDefinition we need to query against.</param>
+''' <returns>Returns a BomRowItem</returns>
+''' <remarks></remarks>
+Public Function getRowItem(ByVal oCompdef As componentdefinition) As BomRowItem
+    MessageBox.Show("Parent Assembly= " & oCompDef.Document.FullFileName)
+    'get the PropertySets we need
+    Dim invProjProperties As PropertySet = oCompDef.Document.PropertySets.Item("{32853F0F-3444-11D1-9E93-0060B03C1CA6}")
+    Dim invSummaryiProperties As PropertySet = oCompDef.Document.PropertySets.Item("{F29F85E0-4FF9-1068-AB91-08002B27B3D9}")
+    Dim invCustomPropertySet As PropertySet = oCompDef.Document.PropertySets.Item("Inventor User Defined Properties")
+
+    Dim oPartNumProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
+    Dim oRevProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kRevisionSummaryInformation).Value
+    Dim oDescripProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
+    Dim oStatusProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDesignStatusDesignTrackingProperties).Value
+    Dim oVendorProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kVendorDesignTrackingProperties).Value
+    Dim oCommentsProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kCommentsSummaryInformation).Value
+
+    Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
+
+    rowItem.FileName = oCompDef.Document.FullFileName
+    rowItem.PartNo = oPartNumProperty
+    rowItem.Rev = oRevProperty
+    rowItem.Descr = oDescripProperty
+    rowItem.ItemNo = "0"
+    rowItem.Classification = Classification
+    rowItem.Material = ""
+    rowItem.Qty = 1
+    rowItem.Vendor = oVendorProperty
+    rowItem.Comments = oCommentsProperty
+    rowItem.BomRowType = GetBomRowTypeByFileName(oCompDef.Document.FullFileName)
+    rowItem.status = oStatusproperty
+    Return rowItem
 End Function
 
 ''' <summary>
@@ -156,97 +197,225 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
         'we need to make an Excel file.
         Dim filetab As String = "DETAILS"
         Dim xlTemplate As String = "C:\LEGACY VAULT WORKING FOLDER\Designs\iLogic\Templates\BOM_Master.xlsx"
+        Dim xlOutput As String = System.IO.Path.GetDirectoryName(ThisApplication.ActiveDocument.FullFileName) & "\BOM-" & GetFriendlyName(System.IO.Path.GetFileNameWithoutExtension(ThisApplication.ActiveDocument.FullFileName)) & ".xlsx"
         Dim excelApp = CreateObject("Excel.Application")
         Dim excelWorkBook
         Dim excelWorkSheet
         excelApp.Visible = True
         excelApp.DisplayAlerts = False
 
-        If dir(xltemplate) <> "" Then
-            'MessageBox.Show("Excel file found for output, continuing!")
-            excelworkbook = excelApp.workbooks.open(xltemplate)
+        If dir(xlOutput) <> "" Then
+            'MessageBox.Show("Existing Excel file found for output, updating!")
+            excelworkbook = excelApp.workbooks.Open(xlOutput)
+            ReFormatBOMFrontSheet(excelapp, excelworkbook, 200)
             excelSheet = excelWorkbook.Worksheets(2).Activate
         Else
-            MessageBox.Show("No excel file found for output!")
-            Exit Sub
+            'MessageBox.Show("New excel file underway!")
+            Try
+                excelworkbook = excelApp.workbooks.Open(xlTemplate)
+            Catch ex As Exception
+                MessageBox.Show("You need to get the BOM_Master.xlsx file from Vault and try again!")
+                Exit Sub
+            End Try
+            excelSheet = excelWorkbook.Worksheets(2).Activate
         End If
         'FilesArray = GoExcel.CellValues("C:\LEGACY VAULT WORKING FOLDER\Designs\iLogic\Templates\BOM_Master.xlsx", filetab, "A3", "A4") ' sets excel to the correct sheet!
-        Dim MyRow As Integer = 2
+        Dim MyRow As Integer = 3
+        Dim parentHeader As Boolean = False
         Dim specHeader As Boolean = False
         Dim saHeader As Boolean = False
         Dim dpHeader As Boolean = False
         Dim cotsHeader As Boolean = False
         For Each oItem As BomRowItem In oPartsList
-            If oItem.ItemNo = 0 And specHeader = False Then
+            'If oItem.FileName = ThisApplication.ActiveDocument.FullFileName Then 'it's the parent Assembly and should be the first item?
+
+            'End If
+            If oitem.ItemNo = 0 And parentHeader = False Then
+                MessageBox.Show("Parent Assembly found, filling out details!")
+                excelSheet = excelWorkbook.Worksheets(1).Activate
+                excelapp.range("F1").Select()
+                excelapp.ActiveCell.Value = oItem.Status
+                If oItem.Descr.Length > 30 Then '30 allows some wiggle room for when "fat" characters are used.
+                    Dim lines = XTCS.SplitToLines(oItem.Descr, 30)
+                    Dim row As Integer = 2
+                    MessageBox.Show("Lines count for this assembly= " & lines.count)
+                    For index = 0 To lines.count - 1
+                        excelapp.range("H" & row).Select()
+                        excelapp.ActiveCell.Value = lines.Item(index)
+                        row += 1
+                    Next
+                Else
+                    excelapp.range("H2").Select()
+                    excelapp.ActiveCell.Value = oItem.Descr
+                End If
+                excelapp.Range("K2").Select() 'Drawing ref
+                excelapp.ActiveCell.Value = System.IO.Path.GetFileNameWithoutExtension(xlOutput)
+                excelapp.Range("K3").Select() 'Revision
+                excelapp.ActiveCell.Value = "REVISION : " & oItem.Rev
+                excelapp.Range("K3").Characters(12, 1).Font.Bold = True
+
+                excelSheet = excelWorkbook.Worksheets(2).Activate
+                excelapp.range("A2").Select()
+                excelapp.ActiveCell.Value = "PARENT ASSEMBLY"
+                parentHeader = True
+                MyRow += 1
+                MessageBox.Show("MYRow Value= " & MyRow)
+                AssignValuesToExcel(excelapp, oItem, MyRow)
+            ElseIf oItem.ItemNo = 9999 And specHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "SPECIFICATIONS"
                 'GoExcel.CellValue("A" & MyRow) = "SPECIFICATIONS"
                 specHeader = True
-                MyRow = MyRow + 1
-            ElseIf oItem.ItemNo >= 1 And oItem.ItemNo < 200 And saHeader = False Then
+                MyRow += 1
+            ElseIf oItem.ItemNo > 1 And oItem.ItemNo < 200 And saHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "SUB ASSEMBLIES"
                 'GoExcel.CellValue("A" & MyRow) = "SUB ASSEMBLIES"
                 saHeader = True
-                MyRow = MyRow + 1
+                MyRow += 1
             ElseIf oitem.ItemNo >= 200 And oItem.ItemNo < 500 And dpHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "DETAILED PARTS"
                 'GoExcel.CellValue("A" & MyRow) = "DETAILED PARTS"
                 dpHeader = True
-                MyRow = MyRow + 1
+                MyRow += 1
             ElseIf oItem.ItemNo >= 500 And cotsheader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "COTS PARTS"
                 'GoExcel.CellValue("A" & MyRow) = "COTS PARTS"
                 cotsHeader = True
-                MyRow = MyRow + 1
-                'Else
-                '    excelapp.range("A" & MyRow).Select()
-                '    excelapp.ActiveCell.Value = "SOMETHING ELSE ENTIRELY!?"
-                '    'GoExcel.CellValue("A" & MyRow) = "SOMETHING ELSE ENTIRELY!?"
-                '    MyRow = MyRow + 1
+                MyRow += 1
             End If
             excelapp.range("A" & MyRow).Select()
-            If oItem.ItemNo = 0 Then
+            If oItem.ItemNo = 9999 Or oItem.ItemNo = 0 Then
                 excelapp.ActiveCell.Value = ""
             Else
                 excelapp.ActiveCell.Value = oItem.ItemNo.ToString()
             End If
-            'GoExcel.CellValue("A" & MyRow) = oItem.ItemNo
-            excelapp.range("B" & MyRow).Select()
-            excelapp.ActiveCell.Value = oItem.PartNo
-            'GoExcel.CellValue("B" & MyRow) = oItem.PartNo
-            excelapp.range("C" & MyRow).Select()
-            excelapp.ActiveCell.Value = oItem.Rev
-            'GoExcel.CellValue("C" & MyRow) = oItem.Rev
-            excelapp.range("D" & MyRow).Select()
-            excelapp.ActiveCell.Value = oItem.Descr
-            'GoExcel.CellValue("D" & MyRow) = oItem.Descr
-            excelapp.range("E" & MyRow).Select()
-            excelapp.ActiveCell.Value = oItem.Classification
-            'GoExcel.CellValue("E" & MyRow) = oItem.Classification
-            excelapp.range("F" & MyRow).Select()
-            excelapp.ActiveCell.Value = oItem.Material
-            'GoExcel.CellValue("F" & MyRow) = oItem.Material
-            excelapp.range("G" & MyRow).Select()
-            excelapp.ActiveCell.Value = oItem.Qty.ToString()
-            'GoExcel.CellValue("G" & MyRow) = oItem.Qty
-            excelapp.range("H" & MyRow).Select()
-            excelapp.ActiveCell.Value = ""
-            'GoExcel.CellValue("H" & MyRow) = ""
-            excelapp.range("H" & MyRow).Select()
-            excelapp.ActiveCell.Value = oItem.Vendor
-            'GoExcel.CellValue("I" & MyRow) = oItem.Vendor
-            excelapp.range("H" & MyRow).Select()
-            excelapp.ActiveCell.Value = ""
-            'GoExcel.CellValue("J" & MyRow) = ""
-            excelapp.range("K" & MyRow).Select()
-            excelapp.ActiveCell.Value = oItem.Comments
-            'GoExcel.CellValue("K" & MyRow) = oItem.Comments
+            AssignValuesToExcel(excelapp, oItem, MyRow)
             MyRow = MyRow + 1
         Next
+        'MessageBox.Show("Excel output complete, saving...")
         excelapp.Columns.Autofit()
-        excelWorkbook.SaveAs(System.IO.Path.GetDirectoryName(ThisApplication.ActiveDocument.FullFileName) & "\" & System.IO.Path.GetFileNameWithoutExtension(ThisApplication.ActiveDocument.FullFileName) & ".xlsx")
+        FormatBOMFrontSheet(excelapp, ExcelWorkBook, MyRow)
+        excelWorkbook.SaveAs(xlOutput)
+        excelapp.quit()
+        excelworkbook = Nothing
+        excelapp = Nothing
     End If
+End Sub
+
+''' <summary>
+''' 
+''' </summary>
+''' <param name="excelapp"></param>
+''' <param name="oItem"></param>
+''' <param name="MyRow"></param>
+''' <remarks></remarks>
+Public Sub AssignValuesToExcel(ByRef excelapp As Object, ByVal oItem As BomRowItem, ByVal MyRow As Integer)
+    excelapp.range("B" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.PartNo
+    excelapp.range("C" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.Rev
+    excelapp.range("D" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.Descr
+    excelapp.range("E" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.Classification
+    excelapp.range("F" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.Material
+    excelapp.range("G" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.Qty.ToString()
+    excelapp.range("H" & MyRow).Select()
+    excelapp.ActiveCell.Value = ""
+    excelapp.range("H" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.Vendor
+    excelapp.range("H" & MyRow).Select()
+    excelapp.ActiveCell.Value = ""
+    excelapp.range("K" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.Comments
+End Sub
+''' <summary>
+''' Returns a "Friendly" filename for comparison-sake
+''' </summary>
+''' <param name="p">the String to match against</param>
+''' <returns>Returns the matched String</returns>
+''' <remarks></remarks>
+Public Function GetFriendlyName(p As String) As Object
+    Dim f As String = String.Empty
+    Dim r As New Regex("\d{5,}|\w\d{5,}")
+    Try
+        f = r.Match(p).Captures(0).ToString() + "-000"
+    Catch ex As Exception
+        'no match
+        f = p
+    End Try
+    Console.WriteLine(f)
+    Return f
+End Function
+
+''' <summary>
+''' Formats the BOM Front sheet so that the cells denoting section headings can successfully overlap the adjacent cells
+''' </summary>
+''' <param name="Excelapp">The Excel object</param>
+''' <param name="ExcelWorkbook">the Excel workbook</param>
+''' <param name="NumUsedRows">the number of rows to add</param>
+''' <remarks></remarks>
+Public Sub FormatBOMFrontSheet(ByRef Excelapp As Object, ByRef ExcelWorkbook As Object, ByVal NumUsedRows As Integer)
+    'MessageBox.Show("Preparing to format BOM Front sheet")
+    excelSheet = ExcelWorkbook.Worksheets(1).Activate 'activate front sheet
+    For index = 5 To NumUsedRows + 5
+        excelapp.range("A" & index).Select()
+        Dim IsNumeric As Boolean = Integer.TryParse(excelapp.ActiveCell.Value, n)
+        If Not IsNumeric Then
+            excelapp.range("B" & index).Select()
+            Try
+                If excelapp.ActiveCell.Value = 0 Then
+                    excelapp.Activecell.formula = ""
+                End If
+            Catch ex As Exception
+                If excelapp.ActiveCell.Value = "" Then
+                    excelapp.Activecell.formula = ""
+                End If
+            End Try
+
+            'excelapp.ActiveCell.Value = ""
+        End If
+    Next
+End Sub
+
+''' <summary>
+''' Reformats the BOM Front sheet in case we've added an item to the Assembly.
+''' </summary>
+''' <param name="Excelapp">The Excel object</param>
+''' <param name="ExcelWorkbook">the Excel workbook</param>
+''' <param name="NumAvailableRows">the number of rows to reformat</param>
+''' <remarks></remarks>
+Public Sub ReFormatBOMFrontSheet(ByRef Excelapp As Object, ByRef ExcelWorkbook As Object, ByVal NumAvailableRows As Integer)
+    excelSheet = ExcelWorkbook.Worksheets(1).Activate 'activate front sheet
+
+    For index = 5 To NumAvailableRows - 5
+        excelapp.range("A" & index).Select()
+        excelapp.activecell.formula = "=IF(INDIRECT(""DETAILS!A""&BOM!$L" & index & ",TRUE)<>"""",INDIRECT(""DETAILS!A""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("B" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!B""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("C" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!C""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("D" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!D""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("E" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!E""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("F" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!F""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("G" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!G""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("H" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!H""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("I" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!I""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("J" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!J""&BOM!$L" & index & ",TRUE),"""")"
+        excelapp.range("K" & index).Select()
+        excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!K""&BOM!$L" & index & ",TRUE),"""")"
+    Next
+
 End Sub
