@@ -27,6 +27,11 @@ namespace BOMTool
                 Class1.m_inventorApplication = value;
             }
         }
+
+        /// <summary>
+        /// Begins the reformatting of the Inventor BOM
+        /// </summary>
+        /// <param name="InventorBomList"></param>
         public void BeginReformatBomForExcel(ref List<BomRowItem> InventorBomList)
         {
             //MessageBox.Show("Inventor Bom list count =" + InventorBomList.Count);
@@ -45,7 +50,7 @@ namespace BOMTool
                     switch (item.BomRowType)
                     {   
                         case 1: //Specifications = no item number
-                            item.ItemNo = 0;
+                            item.ItemNo = 9999;
                             BomList.Add(item);
                             break;
                         case 2: // Sub assemblies = 1 to 199
@@ -63,6 +68,10 @@ namespace BOMTool
                             COTSContentImportedInt++;
                             BomList.Add(item);
                             break;
+                        case 5: //Parent Assembly
+                            item.ItemNo = 0;
+                            BomList.Add(item);
+                            break;
                         default:
                             break;
                     }
@@ -73,6 +82,12 @@ namespace BOMTool
             //MessageBox.Show("BomList.Count= " + BomList.Count);
             InventorBomList = BomList;
         }
+
+        /// <summary>
+        /// Updates the Inventor item number.
+        /// </summary>
+        /// <param name="oBOMROWs">the BOMROWs collection</param>
+        /// <param name="oSortedPartsList"></param>
         public void UpdateInventorPartsList(BOMRowsEnumerator oBOMROWs, List<BomRowItem> oSortedPartsList)
         {
             //MessageBox.Show("Reached UpdateInventorPartsList Sub");
@@ -90,6 +105,43 @@ namespace BOMTool
                     oRow.ItemNumber = itemNo.ToString();
                 }
             }
+        }
+        /// <summary>
+        /// Splits a string into lines based on max length
+        /// </summary>
+        /// <param name="stringToSplit">the string we want to split</param>
+        /// <param name="maximumLineLength">int to determine max line length</param>
+        /// <returns>an IEnumerable containing string values</returns>
+        /// <remarks>copied from this page: https://stackoverflow.com/questions/22368434/best-way-to-split-string-into-lines-with-maximum-length-without-breaking-words 
+        /// - had to modify it to be a List<> instead of an Enumerable<> as List<> allows the Count() </remarks>
+        public List<string> SplitToLines(string stringToSplit, int maximumLineLength)
+        {
+            var words = stringToSplit.Split(' ').Concat(new[] { "" });
+            return
+                words
+                    .Skip(1)
+                    .Aggregate(
+                        words.Take(1).ToList(),
+                        (a, w) =>
+                        {
+                            var last = a.Last();
+                            while (last.Length > maximumLineLength)
+                            {
+                                a[a.Count() - 1] = last.Substring(0, maximumLineLength);
+                                last = last.Substring(maximumLineLength);
+                                a.Add(last);
+                            }
+                            var test = last + " " + w;
+                            if (test.Length > maximumLineLength)
+                            {
+                                a.Add(w);
+                            }
+                            else
+                            {
+                                a[a.Count() - 1] = test;
+                            }
+                            return a;
+                        });
         }
     }
     public class BomRowItem
