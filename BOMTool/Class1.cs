@@ -48,7 +48,12 @@ namespace BOMTool
                 foreach (BomRowItem item in group)
                 {
                     switch (item.BomRowType)
-                    {   
+                    {
+                        case 0: //Parent Assembly
+                            //MessageBox.Show("Should only be one of these!");
+                            item.ItemNo = 0;
+                            BomList.Add(item);
+                            break;
                         case 1: //Specifications = no item number
                             item.ItemNo = 9999;
                             BomList.Add(item);
@@ -66,11 +71,6 @@ namespace BOMTool
                         case 4: // COTS Parts/Content Centre/Imported Components = 500 to 999
                             item.ItemNo = COTSContentImportedInt;
                             COTSContentImportedInt++;
-                            BomList.Add(item);
-                            break;
-                        case 5: //Parent Assembly
-                            MessageBox.Show("Should only be one of these!");
-                            item.ItemNo = 0;
                             BomList.Add(item);
                             break;
                         default:

@@ -102,7 +102,7 @@ Public Function getRowItem(oCompdef As componentdefinition, oRow As BOMRow) As B
     Dim oClassification As String = Classification
     Dim oMaterial As String
     If TypeOf oCompDef.Document Is AssemblyDocument Then
-        oMaterial = ""
+        oMaterial = "-"
     Else
         oMaterial = oCompDef.Material.Name
     End If
@@ -134,7 +134,7 @@ End Function
 ''' <returns>Returns a BomRowItem</returns>
 ''' <remarks></remarks>
 Public Function getRowItem(ByVal oCompdef As componentdefinition) As BomRowItem
-    MessageBox.Show("Parent Assembly= " & oCompDef.Document.FullFileName)
+    'MessageBox.Show("Parent Assembly= " & oCompDef.Document.FullFileName)
     'get the PropertySets we need
     Dim invProjProperties As PropertySet = oCompDef.Document.PropertySets.Item("{32853F0F-3444-11D1-9E93-0060B03C1CA6}")
     Dim invSummaryiProperties As PropertySet = oCompDef.Document.PropertySets.Item("{F29F85E0-4FF9-1068-AB91-08002B27B3D9}")
@@ -153,7 +153,7 @@ Public Function getRowItem(ByVal oCompdef As componentdefinition) As BomRowItem
     rowItem.PartNo = oPartNumProperty
     rowItem.Rev = oRevProperty
     rowItem.Descr = oDescripProperty
-    rowItem.ItemNo = "0"
+    rowItem.ItemNo = 0
     rowItem.Classification = Classification
     rowItem.Material = ""
     rowItem.Qty = 1
@@ -184,8 +184,8 @@ Public Function GetBomRowTypeByFileName(DocName As String) As Long
         'MessageBox.Show(DocName & " Returns value 4")
         Return 4
     ElseIf docname = ThisApplication.ActiveDocument.FullFileName Then
-        MessageBox.Show(DocName & " Returns value 5")
-        Return 5
+        MessageBox.Show(DocName & " Returns value 0")
+        Return 0
     Else 'These are parts which don't match any of the above criteria
         'MessageBox.Show(DocName & " Returns value 4")
         Return 4
@@ -229,7 +229,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
             excelSheet = excelWorkbook.Worksheets(2).Activate
         End If
         'FilesArray = GoExcel.CellValues("C:\LEGACY VAULT WORKING FOLDER\Designs\iLogic\Templates\BOM_Master.xlsx", filetab, "A3", "A4") ' sets excel to the correct sheet!
-        Dim MyRow As Integer = 3
+        Dim MyRow As Integer = 2
         Dim parentHeader As Boolean = False
         Dim specHeader As Boolean = False
         Dim saHeader As Boolean = False
@@ -240,14 +240,14 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
 
             'End If
             If oitem.ItemNo = 0 And parentHeader = False Then
-                MessageBox.Show("Parent Assembly found, filling out details!")
+                'MessageBox.Show("Parent Assembly found, filling out details!")
                 excelSheet = excelWorkbook.Worksheets(1).Activate
                 excelapp.range("F1").Select()
                 excelapp.ActiveCell.Value = oItem.Status
                 If oItem.Descr.Length > 30 Then '30 allows some wiggle room for when "fat" characters are used.
                     Dim lines = XTCS.SplitToLines(oItem.Descr, 30)
                     Dim row As Integer = 2
-                    MessageBox.Show("Lines count for this assembly= " & lines.count)
+                    'MessageBox.Show("Lines count for this assembly= " & lines.count)
                     For index = 0 To lines.count - 1
                         excelapp.range("H" & row).Select()
                         excelapp.ActiveCell.Value = lines.Item(index)
@@ -264,19 +264,20 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
                 excelapp.Range("K3").Characters(12, 1).Font.Bold = True
 
                 excelSheet = excelWorkbook.Worksheets(2).Activate
-                excelapp.range("A2").Select()
+                excelapp.range("A" & MYRow).Select()
                 excelapp.ActiveCell.Value = "PARENT ASSEMBLY"
                 parentHeader = True
+                'MessageBox.Show("MYRow Value= " & MyRow)
+                'MessageBox.Show("MYRow Value= " & MyRow)
+                'AssignValuesToExcel(excelapp, oItem, MyRow)
                 MyRow += 1
-                MessageBox.Show("MYRow Value= " & MyRow)
-                AssignValuesToExcel(excelapp, oItem, MyRow)
             ElseIf oItem.ItemNo = 9999 And specHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "SPECIFICATIONS"
                 'GoExcel.CellValue("A" & MyRow) = "SPECIFICATIONS"
                 specHeader = True
                 MyRow += 1
-            ElseIf oItem.ItemNo > 1 And oItem.ItemNo < 200 And saHeader = False Then
+            ElseIf oItem.ItemNo >= 1 And oItem.ItemNo < 200 And saHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "SUB ASSEMBLIES"
                 'GoExcel.CellValue("A" & MyRow) = "SUB ASSEMBLIES"
