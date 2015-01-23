@@ -160,4 +160,21 @@ namespace BOMTool
         public long BomRowType { get; set; }
         public string status { get; set; }
     }
+    public class PartsListRowItem : IComparable<PartsListRowItem>
+    {
+        public string ItemNo { get; set; }
+        public Boolean IsBallooned { get; set; }
+        public int CompareTo(PartsListRowItem other)
+        {
+            return this.CompareTo(other);
+        }
+    }
+    public class subObjectLevelComparer : IComparer<PartsListRowItem>
+    {
+
+        public int Compare(PartsListRowItem x, PartsListRowItem y)
+        {
+            return x.ItemNo.CompareTo(y.ItemNo);
+        }
+    }
 }
