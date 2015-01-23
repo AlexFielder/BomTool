@@ -1,14 +1,16 @@
-﻿ 
+﻿Option Explicit On
+'uncomment the following lines before running the iLogic
 'AddReference "System.Core"
 'AddReference "System.Linq"
-'uncomment the following line before running the iLogic
 'AddReference "BomTool.dll"
-'Imports System.Collections.Generic
-'Imports System
+Imports System.Collections.Generic
+Imports System
 'Imports System.IO
-Imports System.Data.Linq
+Imports System.Linq
 Imports BomTool
 Imports System.Text.RegularExpressions
+
+
 
 ''' <summary>
 ''' Our Main program.
@@ -19,12 +21,23 @@ Sub Main()
     Dim PartsList As List(Of BomTool.BomRowItem)
     'pass the local variables to our external .dll
     XTCS.InventorApplication = ThisApplication
-    Dim oDoc As AssemblyDocument = ThisApplication.ActiveDocument
-    'Dim oDoc As AssemblyComponentDefinition = ThisApplication.ActiveDocument.ComponentDefinition
-
+    Dim oDoc As AssemblyDocument
+    Dim oDrawDoc As DrawingDocument
     ' Set a reference to the BOM
     Dim oBOM As BOM
-    oBOM = oDoc.ComponentDefinition.BOM
+    BOMSpreadSheetName = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(ThisApplication.ActiveDocument.FullDocumentName)) & "\DRGS\BOM-" & GetFriendlyName(System.IO.Path.GetFileNameWithoutExtension(ThisApplication.ActiveDocument.FullFileName)) & ".xlsx"
+    If TypeOf ThisApplication.Activedocument Is AssemblyDocument Then
+        oDoc = ThisApplication.ActiveDocument
+        oBOM = oDoc.ComponentDefinition.BOM
+    ElseIf TypeOf thisapplication.ActiveDocument Is DrawingDocument Then
+        oDrawDoc = ThisApplication.ActiveDocument
+        MessageBox.Show("Skipping BOM Creation since you already did that bit didn't you?", "Being sarcastic, of course you did, right!?")
+        MessageBox.Show("Looking for: " & BOMSpreadSheetName)
+        UpdateBOMSpreadsheet(BOMSpreadSheetName)
+        Exit Sub
+    End If
+    'Dim oDoc As AssemblyComponentDefinition = ThisApplication.ActiveDocument.ComponentDefinition
+
 
     oBOM.StructuredViewFirstLevelOnly = True
 
@@ -49,9 +62,12 @@ Sub Main()
     InventorVb.DocumentUpdate()
 End Sub
 
+Public BOMSpreadsheetName As String
 Public XTCS As New BomTool.Class1
 Public Classification As String = String.Empty
 Public PartsList As List(Of BomTool.BomRowItem)
+#Region "BOM Spreadsheet Creation"
+
 
 ''' <summary>
 ''' Queries the BOM Row properties and generates a list to pass externally for sorting.
@@ -63,7 +79,6 @@ Public PartsList As List(Of BomTool.BomRowItem)
 ''' <remarks></remarks>
 Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator) As List(Of BomTool.BomRowItem)
     Dim tmplist As List(Of BomTool.BomRowItem) = New List(Of BomTool.BomRowItem)
-    ItemTab = ItemTab + 3
     ' Iterate through the contents of the BOM Rows.
     Dim i As Long
     For i = 1 To oBOMRows.Count
@@ -191,6 +206,7 @@ Public Function GetBomRowTypeByFileName(DocName As String) As Long
         Return 4
     End If
 End Function
+
 ''' <summary>
 ''' Returns our sorted list to Excel or leaves it as-is if we know the parts list can fit on drawing sheet one of the assembly.
 ''' </summary>
@@ -206,27 +222,26 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
         'we need to make an Excel file.
         Dim filetab As String = "DETAILS"
         Dim xlTemplate As String = "C:\LEGACY VAULT WORKING FOLDER\Designs\iLogic\Templates\BOM_Master.xlsx"
-        Dim xlOutput As String = System.IO.Path.GetDirectoryName(ThisApplication.ActiveDocument.FullFileName) & "\BOM-" & GetFriendlyName(System.IO.Path.GetFileNameWithoutExtension(ThisApplication.ActiveDocument.FullFileName)) & ".xlsx"
         Dim excelApp = CreateObject("Excel.Application")
         Dim excelWorkBook
         Dim excelWorkSheet
         excelApp.Visible = True
         excelApp.DisplayAlerts = False
 
-        If dir(xlOutput) <> "" Then
+        If dir(BOMSpreadsheetName) <> "" Then
             'MessageBox.Show("Existing Excel file found for output, updating!")
-            excelworkbook = excelApp.workbooks.Open(xlOutput)
+            excelworkbook = excelApp.workbooks.Open(BOMSpreadsheetName)
             ReFormatBOMFrontSheet(excelapp, excelworkbook, 200)
-            excelSheet = excelWorkbook.Worksheets(2).Activate
+            excelWorkSheet = excelWorkbook.Worksheets(2).Activate
         Else
             'MessageBox.Show("New excel file underway!")
             Try
-                excelworkbook = excelApp.workbooks.Open(xlTemplate)
+                excelWorkBook = excelApp.workbooks.Open(xlTemplate)
             Catch ex As Exception
                 MessageBox.Show("You need to get the BOM_Master.xlsx file from Vault and try again!")
                 Exit Sub
             End Try
-            excelSheet = excelWorkbook.Worksheets(2).Activate
+            excelWorkSheet = excelWorkbook.Worksheets(2).Activate
         End If
         'FilesArray = GoExcel.CellValues("C:\LEGACY VAULT WORKING FOLDER\Designs\iLogic\Templates\BOM_Master.xlsx", filetab, "A3", "A4") ' sets excel to the correct sheet!
         Dim MyRow As Integer = 2
@@ -236,18 +251,14 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
         Dim dpHeader As Boolean = False
         Dim cotsHeader As Boolean = False
         For Each oItem As BomRowItem In oPartsList
-            'If oItem.FileName = ThisApplication.ActiveDocument.FullFileName Then 'it's the parent Assembly and should be the first item?
-
-            'End If
             If oitem.ItemNo = 0 And parentHeader = False Then
                 'MessageBox.Show("Parent Assembly found, filling out details!")
-                excelSheet = excelWorkbook.Worksheets(1).Activate
+                excelWorkSheet = excelWorkbook.Worksheets(1).Activate
                 excelapp.range("F1").Select()
                 excelapp.ActiveCell.Value = oItem.Status
                 If oItem.Descr.Length > 30 Then '30 allows some wiggle room for when "fat" characters are used.
                     Dim lines = XTCS.SplitToLines(oItem.Descr, 30)
                     Dim row As Integer = 2
-                    'MessageBox.Show("Lines count for this assembly= " & lines.count)
                     For index = 0 To lines.count - 1
                         excelapp.range("H" & row).Select()
                         excelapp.ActiveCell.Value = lines.Item(index)
@@ -258,41 +269,34 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
                     excelapp.ActiveCell.Value = oItem.Descr
                 End If
                 excelapp.Range("K2").Select() 'Drawing ref
-                excelapp.ActiveCell.Value = System.IO.Path.GetFileNameWithoutExtension(xlOutput)
+                excelapp.ActiveCell.Value = System.IO.Path.GetFileNameWithoutExtension(BOMSpreadsheetName)
                 excelapp.Range("K3").Select() 'Revision
                 excelapp.ActiveCell.Value = "REVISION : " & oItem.Rev
                 excelapp.Range("K3").Characters(12, 1).Font.Bold = True
 
-                excelSheet = excelWorkbook.Worksheets(2).Activate
+                excelWorkSheet = excelWorkbook.Worksheets(2).Activate
                 excelapp.range("A" & MYRow).Select()
                 excelapp.ActiveCell.Value = "PARENT ASSEMBLY"
                 parentHeader = True
-                'MessageBox.Show("MYRow Value= " & MyRow)
-                'MessageBox.Show("MYRow Value= " & MyRow)
-                'AssignValuesToExcel(excelapp, oItem, MyRow)
                 MyRow += 1
             ElseIf oItem.ItemNo = 9999 And specHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "SPECIFICATIONS"
-                'GoExcel.CellValue("A" & MyRow) = "SPECIFICATIONS"
                 specHeader = True
                 MyRow += 1
             ElseIf oItem.ItemNo >= 1 And oItem.ItemNo < 200 And saHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "SUB ASSEMBLIES"
-                'GoExcel.CellValue("A" & MyRow) = "SUB ASSEMBLIES"
                 saHeader = True
                 MyRow += 1
             ElseIf oitem.ItemNo >= 200 And oItem.ItemNo < 500 And dpHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "DETAILED PARTS"
-                'GoExcel.CellValue("A" & MyRow) = "DETAILED PARTS"
                 dpHeader = True
                 MyRow += 1
             ElseIf oItem.ItemNo >= 500 And cotsheader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "COTS PARTS"
-                'GoExcel.CellValue("A" & MyRow) = "COTS PARTS"
                 cotsHeader = True
                 MyRow += 1
             End If
@@ -308,7 +312,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
         'MessageBox.Show("Excel output complete, saving...")
         excelapp.Columns.Autofit()
         FormatBOMFrontSheet(excelapp, ExcelWorkBook, MyRow)
-        excelWorkbook.SaveAs(xlOutput)
+        excelWorkbook.SaveAs(BOMSpreadsheetName)
         excelapp.quit()
         excelworkbook = Nothing
         excelapp = Nothing
@@ -372,10 +376,11 @@ End Function
 ''' <remarks></remarks>
 Public Sub FormatBOMFrontSheet(ByRef Excelapp As Object, ByRef ExcelWorkbook As Object, ByVal NumUsedRows As Integer)
     'MessageBox.Show("Preparing to format BOM Front sheet")
-    excelSheet = ExcelWorkbook.Worksheets(1).Activate 'activate front sheet
+    Dim excelWorkSheet = ExcelWorkbook.Worksheets(1).Activate 'activate front sheet
     For index = 5 To NumUsedRows + 5
         excelapp.range("A" & index).Select()
-        Dim IsNumeric As Boolean = Integer.TryParse(excelapp.ActiveCell.Value, n)
+        Dim num As Integer
+        Dim IsNumeric As Boolean = Integer.TryParse(excelapp.ActiveCell.Value, num)
         If Not IsNumeric Then
             excelapp.range("B" & index).Select()
             Try
@@ -401,7 +406,7 @@ End Sub
 ''' <param name="NumAvailableRows">the number of rows to reformat</param>
 ''' <remarks></remarks>
 Public Sub ReFormatBOMFrontSheet(ByRef Excelapp As Object, ByRef ExcelWorkbook As Object, ByVal NumAvailableRows As Integer)
-    excelSheet = ExcelWorkbook.Worksheets(1).Activate 'activate front sheet
+    Dim excelWorkSheet = ExcelWorkbook.Worksheets(1).Activate 'activate front sheet
 
     For index = 5 To NumAvailableRows - 5
         excelapp.range("A" & index).Select()
@@ -429,3 +434,81 @@ Public Sub ReFormatBOMFrontSheet(ByRef Excelapp As Object, ByRef ExcelWorkbook A
     Next
 
 End Sub
+
+#End Region
+
+#Region "BOM Spreadsheet amendments from Drawing"
+''' <summary>
+''' Updates the BOM we already! created with "IsBallooned" Boolean values to help QA.
+''' </summary>
+''' <param name="oBOMDoc">the spreadsheet we need to edit</param>
+''' <remarks></remarks>
+Public Sub UpdateBOMSpreadsheet(ByVal oBOMDoc As String)
+    'Dim PartsListForExcel As List(Of BomTool.PartsListRowItem) = New List(Of BomTool.PartsListRowItem)
+    Dim PartsListForExcel As List(Of PartsListRowItem) = New List(Of PartsListRowItem)
+    Dim oPartsList As PartsList
+    Dim oDrawDoc As DrawingDocument = ThisApplication.ActiveDocument
+    Try
+        oPartsList = oDrawDoc.ActiveSheet.PartsLists.Item(1)
+    Catch ex As Exception
+        MessageBox.Show("No Parts Lists found on the active sheet of this drawing Document, suggest you add one and try again!")
+        Exit Sub
+    End Try
+    Dim excelApp = CreateObject("Excel.Application")
+    Dim excelWorkBook
+    Dim excelWorkSheet
+    excelApp.Visible = True
+    excelApp.DisplayAlerts = False
+
+    If dir(BOMSpreadsheetName) <> "" Then
+        'MessageBox.Show("Existing Excel file found for output, updating!")
+        excelworkbook = excelApp.workbooks.Open(BOMSpreadsheetName)
+        excelWorkSheet = excelWorkbook.Worksheets(2).Activate
+    Else
+        MessageBox.Show("File is missing, what happened?")
+        Exit Sub
+    End If
+    For index = 1 To oPartsList.PartsListRows.Count
+        Dim oRow As PartsListRow = oPartsList.PartsListRows.Item(index)
+        'Dim plRow As BomTool.PartsListRowItem = New BomTool.PartsListRowItem
+        Dim plRow As PartsListRowItem = New PartsListRowItem
+        plRow.IsBallooned = oRow.Ballooned
+        For j = 1 To oPartsList.PartsListColumns.Count
+            Dim oCell As PartsListCell = oRow.Item(j)
+            If oPartsList.PartsListColumns.Item(j).Title = "ITEM" Then
+                If Not oCell.Value = "" Then
+                    plRow.ItemNo = oCell.Value
+                    partsListForExcel.Add(plRow)
+                    Exit For
+                End If
+            End If
+        Next
+    Next
+    MessageBox.Show("Parts List for Excel count= " & PartsListForExcel.Count)
+    For i = 2 To 200 'maxrowcount
+        excelapp.range("A" & i).Select()
+        Dim plItem As BomTool.PartsListRowItem
+        Try
+            plItem = (From a As BomTool.PartsListRowItem In PartsListForExcel
+                 Where a.ItemNo = excelapp.ActiveCell.Value
+                 Select a).FirstOrDefault()
+        Catch ex As Exception
+            Continue For
+        End Try
+        If Not plItem Is Nothing Then
+            excelapp.Range("L" & i).Select()
+            MessageBox.Show("Parts List Item= " & plItem.ItemNo)
+            If plItem.IsBallooned Then
+                excelapp.ActiveCell.Value = "ü" 'is ballooned
+            Else
+                excelapp.ActiveCell.Value = "û" 'is not ballooned
+            End If
+        End If
+    Next
+    excelWorkbook.Save()
+    excelWorkbook.Close()
+    excelapp.quit()
+    excelworkbook = Nothing
+    excelapp = Nothing
+End Sub
+#End Region
