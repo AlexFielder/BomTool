@@ -107,6 +107,11 @@ Public Sub BeginReformatBomForExcel(ByRef InventorBomList As List(Of BomRowItem)
     'MessageBox.Show("Inventor Bom list count =" + InventorBomList.Count);
     BomList = New List(Of BomRowItem)
     Dim grouped = InventorBomList.OrderBy(Function(x) x.BomRowType).GroupBy(Function(x) x.BomRowType)
+    'Dim grouped = InventorBomList.GroupBy(Function(x) x.BomRowType).OrderBy(Function(x) x.PartNo)
+    'dim grouped = InventorBomList.GroupBy(Function(x) x.BomRowType).[Select](Function(group) New With { _
+    '                                                                             Key .BomRowType = group.Key, _
+    '                                                                                 Key .PartNo = group.OrderByAscending(Function(x) x.PartNo) _
+    '                                                                                 }).OrderBy(Function(group) group.PartNo.First().
     'InventorBomList.RemoveRange(0, InventorBomList.Count);
     ' InventorBomList.RemoveAll(NotEmpty);
     'MessageBox.Show("InventorBomList.Count= " + InventorBomList.Count);
@@ -114,6 +119,7 @@ Public Sub BeginReformatBomForExcel(ByRef InventorBomList As List(Of BomRowItem)
     Dim DetailedPartsInt As Integer = 200
     Dim COTSContentImportedInt As Integer = 500
     For Each group As Object In grouped
+        group.OrderBy(Function(x) x.PartNo)
         For Each item As BomRowItem In group
             Select Case item.BomRowType
                 Case 0
