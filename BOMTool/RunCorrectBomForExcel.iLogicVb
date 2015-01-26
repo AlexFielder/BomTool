@@ -54,8 +54,10 @@ Sub Main()
     PartsList = New List(Of BomTool.BomRowItem)
     PartsList.Add(getRowItem(oDoc.ComponentDefinition))
     PartsList.AddRange(QueryBOMRowProperties(oBOMView.BOMRows))
-    Call XTCS.BeginReformatBomForExcel(PartsList)
-    Call XTCS.UpdateInventorPartsList(oBOMView.BOMRows, PartsList)
+    'Call XTCS.BeginReformatBomForExcel(PartsList)
+    BeginReformatBomForExcel(PartsList)
+    'Call XTCS.UpdateInventorPartsList(oBOMView.BOMRows, PartsList)
+    UpdateInventorPartsList(oBOMView.BOMRows, PartsList)
     oBOMView.Sort("Item", 1)
     ReturnPartsListToExcel(PartsList)
     tr.End()
@@ -66,6 +68,8 @@ Public BOMSpreadsheetName As String
 Public XTCS As New BomTool.Class1
 Public Classification As String = String.Empty
 Public PartsList As List(Of BomTool.BomRowItem)
+Public BomList As list(Of BomTool.BomRowItem)
+
 #Region "BOM Spreadsheet Creation"
 
 
@@ -96,6 +100,83 @@ Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator) As L
 End Function
 
 ''' <summary>
+''' Begins the reformatting of the Inventor BOM
+''' </summary>
+''' <param name="InventorBomList"></param>
+Public Sub BeginReformatBomForExcel(ByRef InventorBomList As List(Of BomRowItem))
+    'MessageBox.Show("Inventor Bom list count =" + InventorBomList.Count);
+    BomList = New List(Of BomRowItem)
+    Dim grouped = InventorBomList.OrderBy(Function(x) x.BomRowType).GroupBy(Function(x) x.BomRowType)
+    'InventorBomList.RemoveRange(0, InventorBomList.Count);
+    ' InventorBomList.RemoveAll(NotEmpty);
+    'MessageBox.Show("InventorBomList.Count= " + InventorBomList.Count);
+    Dim SubAssemblyInt As Integer = 1
+    Dim DetailedPartsInt As Integer = 200
+    Dim COTSContentImportedInt As Integer = 500
+    For Each group As Object In grouped
+        For Each item As BomRowItem In group
+            Select Case item.BomRowType
+                Case 0
+                    'Parent Assembly
+                    'MessageBox.Show("Should only be one of these!");
+                    item.ItemNo = 0
+                    BomList.Add(item)
+                    Exit Select
+                Case 1
+                    'Specifications = no item number
+                    item.ItemNo = 9999
+                    BomList.Add(item)
+                    Exit Select
+                Case 2
+                    ' Sub assemblies = 1 to 199
+                    item.ItemNo = SubAssemblyInt
+                    SubAssemblyInt += 1
+                    BomList.Add(item)
+                    Exit Select
+                Case 3
+                    ' Detailed Parts = 200 to 500
+                    item.ItemNo = DetailedPartsInt
+                    DetailedPartsInt += 1
+                    BomList.Add(item)
+                    Exit Select
+                Case 4
+                    ' COTS Parts/Content Centre/Imported Components = 500 to 999
+                    item.ItemNo = COTSContentImportedInt
+                    COTSContentImportedInt += 1
+                    BomList.Add(item)
+                    Exit Select
+                Case Else
+                    Exit Select
+            End Select
+        Next
+    Next
+    'hopefully sort by ItemNo
+    BomList.OrderBy(Function(x) x.ItemNo)
+    'MessageBox.Show("BomList.Count= " + BomList.Count);
+    InventorBomList = BomList
+End Sub
+
+''' <summary>
+''' Updates the Inventor item number.
+''' </summary>
+''' <param name="oBOMROWs">the BOMROWs collection</param>
+''' <param name="oSortedPartsList"></param>
+Public Sub UpdateInventorPartsList(oBOMROWs As BOMRowsEnumerator, oSortedPartsList As List(Of BomRowItem))
+    'MessageBox.Show("Reached UpdateInventorPartsList Sub");
+    Dim oCompdef As ComponentDefinition
+    For Each oRow As BOMRow In oBOMROWs
+        oCompdef = oRow.ComponentDefinitions(1)
+        Dim item As Long = (From a In oSortedPartsList Where a.FileName = oCompdef.Document.FullFileName Select a.ItemNo).FirstOrDefault()
+        If item = 0 OrElse item = 9999 Then
+            oRow.ItemNumber = ""
+        Else
+            oRow.ItemNumber = item.ToString()
+        End If
+    Next
+End Sub
+
+
+''' <summary>
 ''' creates a BomRowItem for every ComponentDefinition passed to it.
 ''' </summary>
 ''' <param name="oCompdef">the ComponentDefinition we need to query against.</param>
@@ -123,7 +204,13 @@ Public Function getRowItem(oCompdef As componentdefinition, oRow As BOMRow) As B
     End If
     Dim oQty As Long = oRow.ItemQuantity
     Dim oVendorProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kVendorDesignTrackingProperties).Value
+    If oVendorProperty = "" Then
+        oVendorProperty = "-"
+    End If
     Dim oCommentsProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kCommentsSummaryInformation).Value
+    If oCommentsProperty = "" Then
+        oCommentsProperty = "-"
+    End If
 
     Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
 
@@ -160,8 +247,13 @@ Public Function getRowItem(ByVal oCompdef As componentdefinition) As BomRowItem
     Dim oDescripProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
     Dim oStatusProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDesignStatusDesignTrackingProperties).Value
     Dim oVendorProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kVendorDesignTrackingProperties).Value
+    If oVendorProperty = "" Then
+        oVendorProperty = "-"
+    End If
     Dim oCommentsProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kCommentsSummaryInformation).Value
-
+    If oCommentsProperty = "" Then
+        oCommentsProperty = "-"
+    End If
     Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
 
     rowItem.FileName = oCompDef.Document.FullFileName
@@ -199,7 +291,7 @@ Public Function GetBomRowTypeByFileName(DocName As String) As Long
         'MessageBox.Show(DocName & " Returns value 4")
         Return 4
     ElseIf docname = ThisApplication.ActiveDocument.FullFileName Then
-        MessageBox.Show(DocName & " Returns value 0")
+        'MessageBox.Show(DocName & " Returns value 0")
         Return 0
     Else 'These are parts which don't match any of the above criteria
         'MessageBox.Show(DocName & " Returns value 4")
@@ -238,7 +330,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
             Try
                 excelWorkBook = excelApp.workbooks.Open(xlTemplate)
             Catch ex As Exception
-                MessageBox.Show("You need to get the BOM_Master.xlsx file from Vault and try again!")
+                MessageBox.Show("You need to GET the BOM_Master.xlsx file from Vault and try again!")
                 Exit Sub
             End Try
             excelWorkSheet = excelWorkbook.Worksheets(2).Activate
@@ -320,7 +412,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
 End Sub
 
 ''' <summary>
-''' 
+''' AssignValues to Excel
 ''' </summary>
 ''' <param name="excelapp"></param>
 ''' <param name="oItem"></param>
@@ -340,11 +432,11 @@ Public Sub AssignValuesToExcel(ByRef excelapp As Object, ByVal oItem As BomRowIt
     excelapp.range("G" & MyRow).Select()
     excelapp.ActiveCell.Value = oItem.Qty.ToString()
     excelapp.range("H" & MyRow).Select()
-    excelapp.ActiveCell.Value = ""
-    excelapp.range("H" & MyRow).Select()
     excelapp.ActiveCell.Value = oItem.Vendor
-    excelapp.range("H" & MyRow).Select()
-    excelapp.ActiveCell.Value = ""
+    excelapp.range("I" & MyRow).Select()
+    excelapp.ActiveCell.Value = "-"
+    excelapp.range("J" & MyRow).Select()
+    excelapp.ActiveCell.Value = "-"
     excelapp.range("K" & MyRow).Select()
     excelapp.ActiveCell.Value = oItem.Comments
 End Sub
@@ -484,7 +576,7 @@ Public Sub UpdateBOMSpreadsheet(ByVal oBOMDoc As String)
             End If
         Next
     Next
-    MessageBox.Show("Parts List for Excel count= " & PartsListForExcel.Count)
+    'MessageBox.Show("Parts List for Excel count= " & PartsListForExcel.Count)
     For i = 2 To 200 'maxrowcount
         excelapp.range("A" & i).Select()
         Dim plItem As BomTool.PartsListRowItem
@@ -497,7 +589,7 @@ Public Sub UpdateBOMSpreadsheet(ByVal oBOMDoc As String)
         End Try
         If Not plItem Is Nothing Then
             excelapp.Range("L" & i).Select()
-            MessageBox.Show("Parts List Item= " & plItem.ItemNo)
+            'MessageBox.Show("Parts List Item= " & plItem.ItemNo)
             If plItem.IsBallooned Then
                 excelapp.ActiveCell.Value = "ü" 'is ballooned
             Else
