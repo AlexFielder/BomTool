@@ -31,7 +31,7 @@ Sub Main()
         oBOM = oDoc.ComponentDefinition.BOM
     ElseIf TypeOf thisapplication.ActiveDocument Is DrawingDocument Then
         oDrawDoc = ThisApplication.ActiveDocument
-        MessageBox.Show("Skipping BOM Creation since you already did that bit didn't you?", "Being sarcastic, of course you did, right!?")
+        'MessageBox.Show("Skipping BOM Creation since you already did that bit didn't you?", "Being sarcastic, of course you did, right!?")
         MessageBox.Show("Looking for: " & BOMSpreadSheetName)
         UpdateBOMSpreadsheet(BOMSpreadSheetName)
         Exit Sub
@@ -69,6 +69,7 @@ Public XTCS As New BomTool.Class1
 Public Classification As String = String.Empty
 Public PartsList As List(Of BomTool.BomRowItem)
 Public BomList As list(Of BomTool.BomRowItem)
+Public numHeaderRows As Integer
 
 #Region "BOM Spreadsheet Creation"
 
@@ -107,11 +108,6 @@ Public Sub BeginReformatBomForExcel(ByRef InventorBomList As List(Of BomRowItem)
     'MessageBox.Show("Inventor Bom list count =" + InventorBomList.Count);
     BomList = New List(Of BomRowItem)
     Dim grouped = InventorBomList.OrderBy(Function(x) x.BomRowType).ThenBy(Function(x) x.PartNo).GroupBy(Function(x) x.BomRowType)
-    'Dim grouped = InventorBomList.GroupBy(Function(x) x.BomRowType).OrderBy(Function(x) x.PartNo)
-    'dim grouped = InventorBomList.GroupBy(Function(x) x.BomRowType).[Select](Function(group) New With { _
-    '                                                                             Key .BomRowType = group.Key, _
-    '                                                                                 Key .PartNo = group.OrderByAscending(Function(x) x.PartNo) _
-    '                                                                                 }).OrderBy(Function(group) group.PartNo.First().
     'InventorBomList.RemoveRange(0, InventorBomList.Count);
     ' InventorBomList.RemoveAll(NotEmpty);
     'MessageBox.Show("InventorBomList.Count= " + InventorBomList.Count);
@@ -197,6 +193,9 @@ Public Function getRowItem(oCompdef As componentdefinition, oRow As BOMRow) As B
 
     Dim oPartNumProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
     Dim oRevProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kRevisionSummaryInformation).Value
+    If oRevProperty = "" Then
+        oRevProperty = "-"
+    End If
     Dim oDescripProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
     Dim oStatusProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDesignStatusDesignTrackingProperties).Value
 
@@ -210,7 +209,7 @@ Public Function getRowItem(oCompdef As componentdefinition, oRow As BOMRow) As B
     End If
     Dim oQty As Long = oRow.ItemQuantity
     Dim oVendorProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kVendorDesignTrackingProperties).Value
-    If oVendorProperty = "" Then
+    If oVendorProperty = "" Or oVendorProperty = "Supplier/Manufacturer" Then
         oVendorProperty = "-"
     End If
     Dim oCommentsProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kCommentsSummaryInformation).Value
@@ -250,10 +249,13 @@ Public Function getRowItem(ByVal oCompdef As componentdefinition) As BomRowItem
 
     Dim oPartNumProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kPartNumberDesignTrackingProperties).Value
     Dim oRevProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kRevisionSummaryInformation).Value
+    If oRevProperty = "" Then
+        oRevProperty = "-"
+    End If
     Dim oDescripProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDescriptionDesignTrackingProperties).Value
     Dim oStatusProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kDesignStatusDesignTrackingProperties).Value
     Dim oVendorProperty As String = invProjProperties.ItemByPropId(PropertiesForDesignTrackingPropertiesEnum.kVendorDesignTrackingProperties).Value
-    If oVendorProperty = "" Then
+    If oVendorProperty = "" Or oVendorProperty = "Supplier/Manufacturer" Then
         oVendorProperty = "-"
     End If
     Dim oCommentsProperty As String = invSummaryiProperties.ItemByPropId(PropertiesForSummaryInformationEnum.kCommentsSummaryInformation).Value
@@ -268,7 +270,7 @@ Public Function getRowItem(ByVal oCompdef As componentdefinition) As BomRowItem
     rowItem.Descr = oDescripProperty
     rowItem.ItemNo = 0
     rowItem.Classification = Classification
-    rowItem.Material = ""
+    rowItem.Material = "-"
     rowItem.Qty = 1
     rowItem.Vendor = oVendorProperty
     rowItem.Comments = oCommentsProperty
@@ -330,6 +332,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
             'MessageBox.Show("Existing Excel file found for output, updating!")
             excelworkbook = excelApp.workbooks.Open(BOMSpreadsheetName)
             ReFormatBOMFrontSheet(excelapp, excelworkbook, 200)
+            TrimDataSheet(excelapp, excelworkbook, oPartsList.Count)
             excelWorkSheet = excelWorkbook.Worksheets(2).Activate
         Else
             'MessageBox.Show("New excel file underway!")
@@ -343,6 +346,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
         End If
         'FilesArray = GoExcel.CellValues("C:\LEGACY VAULT WORKING FOLDER\Designs\iLogic\Templates\BOM_Master.xlsx", filetab, "A3", "A4") ' sets excel to the correct sheet!
         Dim MyRow As Integer = 2
+        NumHeaderRows = 1
         Dim parentHeader As Boolean = False
         Dim specHeader As Boolean = False
         Dim saHeader As Boolean = False
@@ -377,26 +381,31 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
                 excelapp.ActiveCell.Value = "PARENT ASSEMBLY"
                 parentHeader = True
                 MyRow += 1
+                'NumHeaderRows += 1 'NumHeaderRows will always be at least 1
             ElseIf oItem.ItemNo = 9999 And specHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "SPECIFICATIONS"
                 specHeader = True
                 MyRow += 1
+                NumHeaderRows += 1
             ElseIf oItem.ItemNo >= 1 And oItem.ItemNo < 200 And saHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "SUB ASSEMBLIES"
                 saHeader = True
                 MyRow += 1
+                NumHeaderRows += 1
             ElseIf oitem.ItemNo >= 200 And oItem.ItemNo < 500 And dpHeader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "DETAILED PARTS"
                 dpHeader = True
                 MyRow += 1
+                NumHeaderRows += 1
             ElseIf oItem.ItemNo >= 500 And cotsheader = False Then
                 excelapp.range("A" & MyRow).Select()
                 excelapp.ActiveCell.Value = "COTS PARTS"
                 cotsHeader = True
                 MyRow += 1
+                NumHeaderRows += 1
             End If
             excelapp.range("A" & MyRow).Select()
             If oItem.ItemNo = 9999 Or oItem.ItemNo = 0 Then
@@ -407,7 +416,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
             AssignValuesToExcel(excelapp, oItem, MyRow)
             MyRow = MyRow + 1
         Next
-        'MessageBox.Show("Excel output complete, saving...")
+        MessageBox.Show("Excel output complete, saving...")
         excelapp.Columns.Autofit()
         FormatBOMFrontSheet(excelapp, ExcelWorkBook, MyRow)
         excelWorkbook.SaveAs(BOMSpreadsheetName)
@@ -438,9 +447,9 @@ Public Sub AssignValuesToExcel(ByRef excelapp As Object, ByVal oItem As BomRowIt
     excelapp.range("G" & MyRow).Select()
     excelapp.ActiveCell.Value = oItem.Qty.ToString()
     excelapp.range("H" & MyRow).Select()
-    excelapp.ActiveCell.Value = oItem.Vendor
-    excelapp.range("I" & MyRow).Select()
     excelapp.ActiveCell.Value = "-"
+    excelapp.range("I" & MyRow).Select()
+    excelapp.ActiveCell.Value = oItem.Vendor
     excelapp.range("J" & MyRow).Select()
     excelapp.ActiveCell.Value = "-"
     excelapp.range("K" & MyRow).Select()
@@ -531,6 +540,26 @@ Public Sub ReFormatBOMFrontSheet(ByRef Excelapp As Object, ByRef ExcelWorkbook A
         excelapp.activecell.formula = "=IF(NOT(ISBLANK(INDIRECT(""DETAILS!B""&BOM!$L" & index & "))),INDIRECT(""DETAILS!K""&BOM!$L" & index & ",TRUE),"""")"
     Next
 
+End Sub
+
+Public Sub TrimDataSheet(ByRef ExcelApp As Object, ByRef ExcelWorkbook As Object, ByVal NumRowsRequired As Integer)
+    Dim excelWorkSheet = ExcelWorkbook.Worksheets(2).Activate 'activate data sheet
+    'MessageBox.Show("Number of Rows Required = " & NumRowsRequired)
+    'MessageBox.Show("Number of Header Rows Required = " & NumHeaderRows)
+    If NumRowsRequired >= 200 Then
+        MessageBox.Show("MaxRows needs to be increased to more than 200")
+        Exit Sub
+    End If
+    For index = NumRowsRequired + 1 + NumHeaderRows To 200 '+ 6 to account for text header rows.
+        For Each c As Char In "ABCDEFGHIJKL"
+            excelapp.range(c & index).Select()
+            excelapp.ActiveCell.Value = ""
+        Next
+        'For c As Char = "A"c To "L"c
+        '    excelapp.range(c & index).Select()
+        '    excelapp.ActiveCell.Value = ""
+        'Next
+    Next
 End Sub
 
 #End Region
