@@ -421,6 +421,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
         FormatBOMFrontSheet(excelapp, ExcelWorkBook, MyRow)
         excelWorkbook.SaveAs(BOMSpreadsheetName)
         excelapp.quit()
+        excelWorkSheet = Nothing
         excelworkbook = Nothing
         excelapp = Nothing
     End If
@@ -635,6 +636,7 @@ Public Sub UpdateBOMSpreadsheet(ByVal oBOMDoc As String)
     excelWorkbook.Save()
     excelWorkbook.Close()
     excelapp.quit()
+    excelworkSheet = Nothing
     excelworkbook = Nothing
     excelapp = Nothing
 End Sub
