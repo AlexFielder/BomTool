@@ -28,6 +28,7 @@ Sub Main()
     ' Set a reference to the BOM
     Dim oBOM As BOM
     BOMSpreadSheetName = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(ThisApplication.ActiveDocument.FullDocumentName)) & "\DRGS\BOM-" & GetFriendlyName(System.IO.Path.GetFileNameWithoutExtension(ThisApplication.ActiveDocument.FullFileName)) & ".xlsx"
+    'MessageBox.Show("BOMSpreadSheetName= " & BOMSpreadSheetName)
     If TypeOf ThisApplication.Activedocument Is AssemblyDocument Then
         oDoc = ThisApplication.ActiveDocument
         oBOM = oDoc.ComponentDefinition.BOM
@@ -425,7 +426,7 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomRowItem))
             AssignValuesToExcel(excelapp, oItem, MyRow)
             MyRow = MyRow + 1
         Next
-        MessageBox.Show("Excel output complete, saving...")
+        'MessageBox.Show("Excel output complete, saving...")
         excelapp.Columns.Autofit()
         FormatBOMFrontSheet(excelapp, ExcelWorkBook, MyRow)
         excelWorkbook.SaveAs(BOMSpreadsheetName)
