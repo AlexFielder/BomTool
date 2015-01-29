@@ -2,11 +2,12 @@
 'uncomment the following lines before running the iLogic
 'AddReference "System.Core"
 'AddReference "System.Linq"
-'AddReference "BomTool.dll"
+''AddReference "BomTool.dll"
 Imports System.Collections.Generic
 Imports System
 'Imports System.IO
 Imports System.Linq
+Imports System.Text
 Imports BomTool
 Imports System.Text.RegularExpressions
 
@@ -17,11 +18,11 @@ Imports System.Text.RegularExpressions
 ''' </summary>
 ''' <remarks></remarks>
 Sub Main()
-    Dim XTCS As New BomTool.Class1
+    'Dim XTCS As New BomTool.Class1
     'Dim PartsList As List(Of BomTool.BomRowItem)
     Dim PartsList As List(Of BomRowItem)
     'pass the local variables to our external .dll
-    XTCS.InventorApplication = ThisApplication
+    'XTCS.InventorApplication = ThisApplication
     Dim oDoc As AssemblyDocument
     Dim oDrawDoc As DrawingDocument
     ' Set a reference to the BOM
@@ -67,7 +68,7 @@ Sub Main()
 End Sub
 
 Public BOMSpreadsheetName As String
-Public XTCS As New BomTool.Class1
+'Public XTCS As New BomTool.Class1
 Public Classification As String = String.Empty
 'Public PartsList As List(Of BomTool.BomRowItem)
 'Public BomList As list(Of BomTool.BomRowItem)
@@ -223,7 +224,8 @@ Public Function getRowItem(oCompdef As componentdefinition, oRow As BOMRow) As B
         oCommentsProperty = "-"
     End If
 
-    Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
+    'Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
+    Dim rowItem As BomRowItem = New BomRowItem()
 
     rowItem.FileName = oCompDef.Document.FullFileName
     rowItem.PartNo = oPartNumProperty
@@ -268,7 +270,8 @@ Public Function getRowItem(ByVal oCompdef As componentdefinition) As BomRowItem
     If oCommentsProperty = "" Then
         oCommentsProperty = "-"
     End If
-    Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
+    'Dim rowItem As BomTool.BomRowItem = New BomTool.BomRowItem()
+    Dim rowItem As BomRowItem = New BomRowItem()
 
     rowItem.FileName = oCompDef.Document.FullFileName
     rowItem.PartNo = oPartNumProperty
@@ -318,7 +321,7 @@ End Function
 ''' </summary>
 ''' <param name="oPartsList">our sorted, renumbered partslist object</param>
 ''' <remarks></remarks>
-Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem))
+Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomRowItem))
 
     Dim booleanParam As Boolean = InputRadioBox("Will the Parts list fit on the drawing?", "Yes", "No", booleanParam, Title:="Title")
     If booleanParam Then
@@ -365,11 +368,11 @@ Public Sub ReturnPartsListToExcel(ByVal oPartsList As List(Of BomTool.BomRowItem
                 excelapp.range("F1").Select()
                 excelapp.ActiveCell.Value = oItem.Status
                 If oItem.Descr.Length > 30 Then '30 allows some wiggle room for when "fat" characters are used.
-                    Dim lines = XTCS.SplitToLines(oItem.Descr, 30)
+                    Dim lines = SplitToLines(oItem.Descr, 30)
                     Dim row As Integer = 2
-                    For index = 0 To lines.count - 1
-                        excelapp.range("H" & row).Select()
-                        excelapp.ActiveCell.Value = lines.Item(index)
+                    For index = 0 To lines.Count - 1
+                        excelApp.range("H" & row).Select()
+                        excelApp.ActiveCell.Value = lines(index)
                         row += 1
                     Next
                 Else
@@ -569,6 +572,43 @@ Public Sub TrimDataSheet(ByRef ExcelApp As Object, ByRef ExcelWorkbook As Object
     Next
 End Sub
 
+''' <summary>
+''' Splits a string into lines based on max length
+''' </summary>
+''' <param name="stringToSplit">the string we want to split</param>
+''' <param name="maxLineLength">int to determine max line length</param>
+''' <returns>an IEnumerable containing string values</returns>
+''' <remarks>copied from this page: https://stackoverflow.com/questions/22368434/best-way-to-split-string-into-lines-with-maximum-length-without-breaking-words 
+''' - had to modify it to be a List instead of an Enumerable as List allows the Count() </remarks>
+Private Shared Iterator Function SplitToLines(stringToSplit As String, maxLineLength As Integer) As IEnumerable(Of String)
+    Dim array As String() = stringToSplit.Split(New Char() {" "})
+    Dim stringBuilder As StringBuilder = New StringBuilder()
+    Try
+        Dim array2 As String() = array
+        For i As Integer = 0 To array2.Length - 1
+            Dim text As String = array2(i)
+            If text.Length + stringBuilder.Length <= maxLineLength Then
+                stringBuilder.Append(text + " ")
+            Else
+                If stringBuilder.Length > 0 Then
+                    Yield stringBuilder.ToString().Trim()
+                    stringBuilder.Clear()
+                End If
+                Dim text2 As String = text
+                While text2.Length > maxLineLength
+                    Yield text2.Substring(0, maxLineLength)
+                    text2 = text2.Substring(maxLineLength)
+                End While
+                stringBuilder.Append(text2 + " ")
+            End If
+        Next
+    Finally
+    End Try
+    Yield stringBuilder.ToString().Trim()
+    Return
+End Function
+
+
 #End Region
 
 #Region "BOM Spreadsheet amendments from Drawing"
@@ -621,9 +661,9 @@ Public Sub UpdateBOMSpreadsheet(ByVal oBOMDoc As String)
     'MessageBox.Show("Parts List for Excel count= " & PartsListForExcel.Count)
     For i = 2 To 200 'maxrowcount
         excelapp.range("A" & i).Select()
-        Dim plItem As BomTool.PartsListRowItem
+        Dim plItem As PartsListRowItem
         Try
-            plItem = (From a As BomTool.PartsListRowItem In PartsListForExcel
+            plItem = (From a As PartsListRowItem In PartsListForExcel
                  Where a.ItemNo = excelapp.ActiveCell.Value
                  Select a).FirstOrDefault()
         Catch ex As Exception
@@ -646,4 +686,142 @@ Public Sub UpdateBOMSpreadsheet(ByVal oBOMDoc As String)
     excelworkbook = Nothing
     excelapp = Nothing
 End Sub
+#End Region
+
+#Region "Classes"
+Public Class BomRowItem
+    Public Property FileName() As String
+        Get
+            Return m_FileName
+        End Get
+        Set(value As String)
+            m_FileName = Value
+        End Set
+    End Property
+    Private m_FileName As String
+    Public Property PartNo() As String
+        Get
+            Return m_PartNo
+        End Get
+        Set(value As String)
+            m_PartNo = Value
+        End Set
+    End Property
+    Private m_PartNo As String
+    Public Property Descr() As String
+        Get
+            Return m_Descr
+        End Get
+        Set(value As String)
+            m_Descr = Value
+        End Set
+    End Property
+    Private m_Descr As String
+    Public Property Rev() As String
+        Get
+            Return m_Rev
+        End Get
+        Set(value As String)
+            m_Rev = Value
+        End Set
+    End Property
+    Private m_Rev As String
+    Public Property ItemNo() As Long
+        Get
+            Return m_ItemNo
+        End Get
+        Set(value As Long)
+            m_ItemNo = Value
+        End Set
+    End Property
+    Private m_ItemNo As Long
+    Public Property Classification() As String
+        Get
+            Return m_Classification
+        End Get
+        Set(value As String)
+            m_Classification = Value
+        End Set
+    End Property
+    Private m_Classification As String
+    Public Property Material() As String
+        Get
+            Return m_Material
+        End Get
+        Set(value As String)
+            m_Material = Value
+        End Set
+    End Property
+    Private m_Material As String
+    Public Property Qty() As Long
+        Get
+            Return m_Qty
+        End Get
+        Set(value As Long)
+            m_Qty = Value
+        End Set
+    End Property
+    Private m_Qty As Long
+    Public Property Vendor() As String
+        Get
+            Return m_Vendor
+        End Get
+        Set(value As String)
+            m_Vendor = Value
+        End Set
+    End Property
+    Private m_Vendor As String
+    Public Property Comments() As String
+        Get
+            Return m_Comments
+        End Get
+        Set(value As String)
+            m_Comments = Value
+        End Set
+    End Property
+    Private m_Comments As String
+    Public Property BomRowType() As Long
+        Get
+            Return m_BomRowType
+        End Get
+        Set(value As Long)
+            m_BomRowType = Value
+        End Set
+    End Property
+    Private m_BomRowType As Long
+    Public Property status() As String
+        Get
+            Return m_status
+        End Get
+        Set(value As String)
+            m_status = Value
+        End Set
+    End Property
+    Private m_status As String
+End Class
+Public Class PartsListRowItem
+    Implements IComparable(Of PartsListRowItem)
+    Public Property ItemNo() As String
+        Get
+            Return m_ItemNo
+        End Get
+        Set(value As String)
+            m_ItemNo = Value
+        End Set
+    End Property
+    Private m_ItemNo As String
+    Public Property IsBallooned() As [Boolean]
+        Get
+            Return m_IsBallooned
+        End Get
+        Set(value As [Boolean])
+            m_IsBallooned = Value
+        End Set
+    End Property
+    Private m_IsBallooned As [Boolean]
+    Public Function CompareTo(other As PartsListRowItem) As Integer Implements IComparable(Of PartsListRowItem).CompareTo
+        Return Me.CompareTo(other)
+    End Function
+End Class
+
 #End Region
