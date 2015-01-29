@@ -18,7 +18,8 @@ Imports System.Text.RegularExpressions
 ''' <remarks></remarks>
 Sub Main()
     Dim XTCS As New BomTool.Class1
-    Dim PartsList As List(Of BomTool.BomRowItem)
+    'Dim PartsList As List(Of BomTool.BomRowItem)
+    Dim PartsList As List(Of BomRowItem)
     'pass the local variables to our external .dll
     XTCS.InventorApplication = ThisApplication
     Dim oDoc As AssemblyDocument
@@ -51,7 +52,8 @@ Sub Main()
     Dim tr As transaction
     tr = ThisApplication.TransactionManager.StartTransaction(ThisApplication.ActiveDocument, "Create Excel Bom From This Assembly")
     Classification = InputBox("Classification?", "Hit N,C & Tab...", "UKU")
-    PartsList = New List(Of BomTool.BomRowItem)
+    'PartsList = New List(Of BomTool.BomRowItem)
+    PartsList = New List(Of BomRowItem)
     PartsList.Add(getRowItem(oDoc.ComponentDefinition))
     PartsList.AddRange(QueryBOMRowProperties(oBOMView.BOMRows))
     'Call XTCS.BeginReformatBomForExcel(PartsList)
@@ -67,8 +69,10 @@ End Sub
 Public BOMSpreadsheetName As String
 Public XTCS As New BomTool.Class1
 Public Classification As String = String.Empty
-Public PartsList As List(Of BomTool.BomRowItem)
-Public BomList As list(Of BomTool.BomRowItem)
+'Public PartsList As List(Of BomTool.BomRowItem)
+'Public BomList As list(Of BomTool.BomRowItem)
+Public PartsList As List(Of BomRowItem)
+Public BomList As list(Of BomRowItem)
 Public numHeaderRows As Integer
 
 #Region "BOM Spreadsheet Creation"
@@ -82,8 +86,10 @@ Public numHeaderRows As Integer
 ''' <param name="Classification"></param>
 ''' <returns></returns>
 ''' <remarks></remarks>
-Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator) As List(Of BomTool.BomRowItem)
-    Dim tmplist As List(Of BomTool.BomRowItem) = New List(Of BomTool.BomRowItem)
+'Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator) As List(Of BomTool.BomRowItem)
+'    Dim tmplist As List(Of BomTool.BomRowItem) = New List(Of BomTool.BomRowItem)
+Private Function QueryBOMRowProperties(ByVal oBOMRows As BOMRowsEnumerator) As List(Of BomRowItem)
+    Dim tmplist As List(Of BomRowItem) = New List(Of BomRowItem)
     ' Iterate through the contents of the BOM Rows.
     Dim i As Long
     For i = 1 To oBOMRows.Count
