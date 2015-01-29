@@ -107,43 +107,6 @@ namespace BOMTool
                 }
             }
         }
-        /// <summary>
-        /// Splits a string into lines based on max length
-        /// </summary>
-        /// <param name="stringToSplit">the string we want to split</param>
-        /// <param name="maximumLineLength">int to determine max line length</param>
-        /// <returns>an IEnumerable containing string values</returns>
-        /// <remarks>copied from this page: https://stackoverflow.com/questions/22368434/best-way-to-split-string-into-lines-with-maximum-length-without-breaking-words 
-        /// - had to modify it to be a List<> instead of an Enumerable<> as List<> allows the Count() </remarks>
-        public List<string> SplitToLines(string stringToSplit, int maximumLineLength)
-        {
-            var words = stringToSplit.Split(' ').Concat(new[] { "" });
-            return
-                words
-                    .Skip(1)
-                    .Aggregate(
-                        words.Take(1).ToList(),
-                        (a, w) =>
-                        {
-                            var last = a.Last();
-                            while (last.Length > maximumLineLength)
-                            {
-                                a[a.Count() - 1] = last.Substring(0, maximumLineLength);
-                                last = last.Substring(maximumLineLength);
-                                a.Add(last);
-                            }
-                            var test = last + " " + w;
-                            if (test.Length > maximumLineLength)
-                            {
-                                a.Add(w);
-                            }
-                            else
-                            {
-                                a[a.Count() - 1] = test;
-                            }
-                            return a;
-                        });
-        }
     }
     public class BomRowItem
     {
