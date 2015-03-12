@@ -681,8 +681,9 @@ Public Sub UpdateBOMSpreadsheet(ByVal oBOMDoc As String)
         End If
     Next
     excelWorkbook.Save()
-    excelWorkbook.Close()
-    excelapp.quit()
+    'changed this to keep Excel open after update.
+    'excelWorkbook.Close()
+    'excelapp.quit()
     excelworkSheet = Nothing
     excelworkbook = Nothing
     excelapp = Nothing
