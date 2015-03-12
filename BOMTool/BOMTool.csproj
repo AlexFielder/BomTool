@@ -16,7 +16,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\..\..\..\..\Program Files\Autodesk\Inventor 2014\Bin\iLogicAdd\</OutputPath>
+    <OutputPath>.\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -47,7 +47,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="RunCorrectBomForExcel.iLogicVb" />
+    <Content Include="RunCorrectBomForExcel.Vb" />
   </ItemGroup>
   <ItemGroup>
     <COMReference Include="stdole">
@@ -62,7 +62,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy /y "$(ProjectDir)RunCorrectBomForExcel.iLogicVb" "C:\Legacy Vault Working Folder\Designs\iLogic\"</PostBuildEvent>
+    <PostBuildEvent>xcopy /y "$(ProjectDir)RunCorrectBomForExcel.Vb" "C:\Legacy Vault Working Folder\Designs\iLogic\RunCorrectBomForExcel.iLogicVb"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
